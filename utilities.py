@@ -9,7 +9,7 @@ Copyright (c) NREL. All rights reserved.
 
 import numpy as np
 from openmdao.main.api import VariableTree
-from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Array
 
 from csystem import DirectionVector
 
@@ -45,13 +45,13 @@ class Vector(VariableTree):
 
 
 
-class MassMomentInertia(VariableTree):
+# class MassMomentInertia(VariableTree):
 
-    xx = Float(units='kg*m**2', desc='mass moment of inertia about x-axis')
-    yy = Float(units='kg*m**2', desc='mass moment of inertia about y-axis')
-    zz = Float(units='kg*m**2', desc='mass moment of inertia about z-axis')
-    xy = Float(units='kg*m**2', desc='mass x-y product of inertia')
-    xz = Float(units='kg*m**2', desc='mass x-z product of inertia')
-    yz = Float(units='kg*m**2', desc='mass y-z product of inertia')
+#     xx = Float(units='kg*m**2', desc='mass moment of inertia about x-axis')
+#     yy = Float(units='kg*m**2', desc='mass moment of inertia about y-axis')
+#     zz = Float(units='kg*m**2', desc='mass moment of inertia about z-axis')
+#     xy = Float(units='kg*m**2', desc='mass x-y product of inertia')
+#     xz = Float(units='kg*m**2', desc='mass x-z product of inertia')
+#     yz = Float(units='kg*m**2', desc='mass y-z product of inertia')
 
 
