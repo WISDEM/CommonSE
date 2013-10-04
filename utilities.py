@@ -11,7 +11,7 @@ import numpy as np
 from openmdao.main.api import VariableTree
 from openmdao.main.datatypes.api import Float, Array
 
-from wisdem.common import DirectionVector  # to replace
+from csystem import DirectionVector
 
 
 
