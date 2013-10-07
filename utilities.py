@@ -44,6 +44,23 @@ class Vector(VariableTree):
         return DirectionVector(self.x, self.y, self.z)
 
 
+def cubicSpline(x1, x2, f1, f2, g1, g2, xeval=None):
+
+
+    A = np.array([[x1**3, x1**2, x1, 1.0],
+                  [x2**3, x2**2, x2, 1.0],
+                  [3*x1**2, 2*x1, 1.0, 0.0],
+                  [3*x2**2, 2*x2, 1.0, 0.0]])
+    b = np.array([f1, f2, g1, g2])
+
+    coeff = np.linalg.solve(A, b)
+
+    if xeval is None:
+        return coeff
+    else:
+        return np.polyval(coeff, xeval)
+
+
 
 # class MassMomentInertia(VariableTree):
 
