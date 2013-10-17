@@ -1,6 +1,7 @@
 # setup.py
 # only if building in place: ``python setup.py build_ext --inplace``
 
+from setuptools import setup, find_packages
 from distutils.core import setup, Extension
 import numpy
 
@@ -11,9 +12,9 @@ setup(
     description='Common utilities for NREL WISDEM',
     author='S. Andrew Ning',
     author_email='andrew.ning@nrel.gov',
-    packages=['wisdem', 'wisdem.commonse'],
+    packages=['commonse'],
     package_dir={'': 'src'},
     license='Apache License, Version 2.0',
-    ext_modules=[Extension('wisdem.commonse._akima', ['src/wisdem/commonse/akima.c'],
+    ext_modules=[Extension('commonse._akima', ['src/commonse/akima.c'],
     include_dirs=[numpy.get_include()])]
 )
