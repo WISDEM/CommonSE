@@ -8,6 +8,7 @@
 # Copyright:   (c) rdamiani 2013
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
+import numpy as np
 
 def main():
     pass
