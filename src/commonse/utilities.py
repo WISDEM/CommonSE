@@ -8,10 +8,10 @@ Copyright (c) NREL. All rights reserved.
 """
 
 import numpy as np
-from openmdao.main.api import VariableTree
-from openmdao.main.datatypes.api import Array
+# from openmdao.main.api import VariableTree
+# from openmdao.main.datatypes.api import Array
 
-from csystem import DirectionVector
+# from csystem import DirectionVector
 
 
 
@@ -34,14 +34,14 @@ def tand(value):
 
 
 
-class Vector(VariableTree):
+# class Vector(VariableTree):
 
-    x = Array()
-    y = Array()
-    z = Array()
+#     x = Array()
+#     y = Array()
+#     z = Array()
 
-    def toDirVec(self):
-        return DirectionVector(self.x, self.y, self.z)
+#     def toDirVec(self):
+#         return DirectionVector(self.x, self.y, self.z)
 
 
 def cubicSpline(x1, x2, f1, f2, g1, g2, xeval=None):
