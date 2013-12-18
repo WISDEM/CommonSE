@@ -1,9 +1,9 @@
 # setup.py
 # only if building in place: ``python setup.py build_ext --inplace``
 
-from setuptools import setup, find_packages
-from distutils.core import setup, Extension
-import numpy
+from setuptools import setup
+from numpy.distutils.core import setup, Extension
+# import numpy
 
 
 setup(
@@ -15,6 +15,7 @@ setup(
     packages=['commonse'],
     package_dir={'': 'src'},
     license='Apache License, Version 2.0',
-    ext_modules=[Extension('commonse._akima', ['src/commonse/akima.c'],
-    include_dirs=[numpy.get_include()])]
+    install_requires=['akima>=1.0'],
+    dependency_links=['https://github.com/andrewning/akima/tarball/master#egg=akima-1.0.0']
+    # ext_modules=[Extension('commonse._akima', ['src/commonse/akima.f90'], extra_compile_args=['-O2'])]
 )
