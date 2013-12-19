@@ -13,31 +13,6 @@ from scipy.optimize import brentq
 from openmdao.main.api import Component, Assembly
 from openmdao.main.datatypes.api import Float, Array
 
-
-## temporary convenience method
-def check_gradient(c):
-
-    class A(Assembly):
-
-        def configure(self):
-
-            self.add('comp', c)
-            self.driver.workflow.add('comp')
-
-    a = A()
-    a.run()
-    c.linearize()
-    inputs, outputs, J = c.provideJ()
-    inputs = list(inputs)
-    outputs = list(outputs)
-    for i, inp in enumerate(inputs):
-        inputs[i] = 'comp.' + inp
-    for i, outp in enumerate(outputs):
-        outputs[i] = 'comp.' + outp
-    a.check_gradient('comp', inputs=inputs, outputs=outputs, mode='forward')
-
-
-
 # -----------------
 #  Base Components
 # -----------------
@@ -47,7 +22,7 @@ class WindBase(Component):
     """base component for wind speed/direction"""
 
     # in
-    z = Array(iotype='in', units='m', desc='heights where wind speed should be computed')
+    z = Array(iotype='in', units='m', required=True, desc='heights where wind speed should be computed')
 
     # out
     U = Array(iotype='out', units='m/s', desc='magnitude of wind speed at each z location')
@@ -58,7 +33,7 @@ class WaveBase(Component):
     """base component for wave speed/direction"""
 
     # in
-    z = Array(iotype='in', units='m', desc='heights where wave speed should be computed')
+    z = Array(iotype='in', units='m', required=True, desc='heights where wave speed should be computed')
 
     # out
     U = Array(iotype='out', units='m/s', desc='magnitude of wave speed at each z location')
@@ -78,7 +53,7 @@ class SoilBase(Component):
     """base component for soil stiffness"""
 
     # out
-    k = Array(iotype='out', units='N/m', desc='spring stiffness. rigid directions should use \
+    k = Array(iotype='out', units='N/m', required=True, desc='spring stiffness. rigid directions should use \
         ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
 
 
@@ -93,8 +68,8 @@ class PowerWind(WindBase):
     """power-law profile wind"""
 
     # variables
-    Uref = Float(iotype='in', units='m/s', desc='reference velocity of power-law model')
-    zref = Float(iotype='in', units='m', desc='corresponding reference height')
+    Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
+    zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
 
     # parameters
     z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
@@ -151,12 +126,12 @@ class LogWind(WindBase):
     """logarithmic-profile wind"""
 
     # variables
-    Uref = Float(iotype='in', units='m/s', desc='reference velocity of power-law model')
-    zref = Float(iotype='in', units='m', desc='corresponding reference height')
-    z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
+    Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
+    zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
+    z0 = Float(0.0, iotype='in', units='m', required=True, desc='bottom of wind profile (height of ground/sea)')
 
     # parameters
-    z_roughness = Float(10.0, iotype='in', units='mm', desc='surface roughness length')
+    z_roughness = Float(10.0, iotype='in', units='mm', required=True, desc='surface roughness length')
     betaWind = Float(0.0, iotype='in', units='deg', desc='wind angle relative to inertial coordinate system')
 
 
@@ -213,13 +188,13 @@ class LinearWaves(WaveBase):
     """linear (Airy) wave theory"""
 
     # variables
-    Uc = Float(iotype='in', units='m/s', desc='mean current speed')
+    Uc = Float(iotype='in', units='m/s', required=True, desc='mean current speed')
 
     # parameters
-    z_surface = Float(iotype='in', units='m', desc='vertical location of water surface')
-    hs = Float(iotype='in', units='m', desc='significant wave height (crest-to-trough)')
-    T = Float(iotype='in', units='s', desc='period of waves')
-    z_floor = Float(0.0, iotype='in', units='m', desc='vertical location of sea floor')
+    z_surface = Float(iotype='in', units='m', required=True, desc='vertical location of water surface')
+    hs = Float(iotype='in', units='m', required=True, desc='significant wave height (crest-to-trough)')
+    T = Float(iotype='in', units='s', required=True, desc='period of waves')
+    z_floor = Float(0.0, iotype='in', units='m', required=True, desc='vertical location of sea floor')
     g = Float(9.81, iotype='in', units='m/s**2', desc='acceleration of gravity')
     betaWave = Float(0.0, iotype='in', units='deg', desc='wave angle relative to inertial coordinate system')
 
@@ -272,13 +247,13 @@ class TowerSoil(SoilBase):
     """textbook soil stiffness method"""
 
     # variable
-    r0 = Float(1.0, iotype='in', units='m', desc='radius of base of tower')
-    depth = Float(1.0, iotype='in', units='m', desc='depth of foundation in the soil')
+    r0 = Float(1.0, iotype='in', units='m', required=True, desc='radius of base of tower')
+    depth = Float(1.0, iotype='in', units='m', required=True, desc='depth of foundation in the soil')
 
     # parameter
     G = Float(140e6, iotype='in', units='Pa', desc='shear modulus of soil')
     nu = Float(0.4, iotype='in', desc='Poisson''s ratio of soil')
-    rigid = Array(iotype='in', dtype=np.bool, desc='directions that should be considered infinitely rigid\
+    rigid = Array(iotype='in', dtype=np.bool, required=True, desc='directions that should be considered infinitely rigid\
         order is x, theta_x, y, theta_y, z, theta_z')
 
 
