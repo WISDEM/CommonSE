@@ -78,7 +78,6 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
     comp.run()
     comp.linearize()
     inputs, outputs, J = comp.provideJ()
-    print J.shape
 
     # compute size of Jacobian
     m = 0
@@ -107,8 +106,10 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
         cnvec.append(n)
 
     JFD = np.zeros((m, n))
-    print m, n
-    exit()
+
+    if J.shape != JFD.shape:
+        raise TypeError('Incorrect Jacobian size. Your provided Jacobian is of shape {}, but it should be ({}, {})'.format(J.shape, m, n))
+
 
     # initialize indices
     m1 = 0
@@ -227,10 +228,6 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
             name = oname + ' / ' + iname
 
             # compute error
-            print i, j
-            print m, n
-            print J.shape
-            print J[i, j]
             if J[i, j] <= tol:
                 errortype = 'absolute'
                 error = J[i, j] - JFD[i, j]
