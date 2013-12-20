@@ -95,6 +95,14 @@ class CubicSpline(object):
 
 
 
+def _getvar(comp, name):
+    vars = name.split('.')
+    base = comp
+    for var in vars:
+        base = getattr(base, var)
+
+    return base
+
 
 def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
@@ -109,7 +117,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
     nvec = []  # size of each input
     cnvec = []  # cumulative size of inputs
     for out in outputs:
-        f = getattr(comp, out)
+        f = _getvar(comp, out)
         if np.array(f).shape == ():
             msub = 1
         else:
@@ -119,7 +127,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
         cmvec.append(m)
     n = 0
     for inp in inputs:
-        x = getattr(comp, inp)
+        x = _getvar(comp, inp)
         if np.array(x).shape == ():
             nsub = 1
         else:
@@ -142,7 +150,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
     for i, out in enumerate(outputs):
 
         # get function value at center
-        f = getattr(comp, out)
+        f = _getvar(comp, out)
         if np.array(f).shape == ():
             lenf = 1
         else:
@@ -156,7 +164,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
         for j, inp in enumerate(inputs):
 
             # get x value at center (save location)
-            x = getattr(comp, inp)
+            x = _getvar(comp, inp)
             if np.array(x).shape == ():
                 x0 = x
                 lenx = 1
@@ -182,7 +190,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
                 comp.run()
 
                 # fd
-                fp = np.copy(getattr(comp, out))
+                fp = np.copy(_getvar(comp, out))
 
                 if fd == 'central':
 
@@ -194,7 +202,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
                     setattr(comp, inp, x)
                     comp.run()
 
-                    fm = np.copy(getattr(comp, out))
+                    fm = np.copy(_getvar(comp, out))
 
                     deriv = (fp - fm)/(2*h)
 
@@ -252,7 +260,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
             name = oname + ' / ' + iname
 
             # compute error
-            if J[i, j] <= tol:
+            if np.abs(J[i, j]) <= tol:
                 errortype = 'absolute'
                 error = J[i, j] - JFD[i, j]
             else:
