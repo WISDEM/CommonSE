@@ -33,6 +33,13 @@ def tand(value):
     return np.tan(np.radians(value))
 
 
+def hstack(vec):
+    return np.vstack(vec).T
+
+
+def vstack(vec):
+    return np.vstack(vec)
+
 
 # class Vector(VariableTree):
 
@@ -44,21 +51,60 @@ def tand(value):
 #         return DirectionVector(self.x, self.y, self.z)
 
 
-def cubicSpline(x1, x2, f1, f2, g1, g2, xeval=None):
+class CubicSpline(object):
 
+    def __init__(self, x1, x2, f1, f2, g1, g2):
 
-    A = np.array([[x1**3, x1**2, x1, 1.0],
+        self.x1 = x1
+        self.x2 = x2
+
+        self.A = np.array([[x1**3, x1**2, x1, 1.0],
                   [x2**3, x2**2, x2, 1.0],
                   [3*x1**2, 2*x1, 1.0, 0.0],
                   [3*x2**2, 2*x2, 1.0, 0.0]])
-    b = np.array([f1, f2, g1, g2])
+        self.b = np.array([f1, f2, g1, g2])
 
-    coeff = np.linalg.solve(A, b)
+        self.coeff = np.linalg.solve(self.A, self.b)
 
-    if xeval is None:
-        return coeff
-    else:
-        return np.polyval(coeff, xeval)
+        self.poly = np.polynomial.Polynomial(self.coeff[::-1])
+
+
+    def eval(self, x):
+        return self.poly(x)
+
+
+    def eval_deriv(self, x):
+        polyd = self.poly.deriv()
+        return polyd(x)
+
+
+    def eval_deriv_params(self, xvec, dx1, dx2, df1, df2, dg1, dg2):
+
+        x1 = self.x1
+        x2 = self.x2
+        dA_dx1 = np.matrix([[3*x1**2, 2*x1, 1.0, 0.0],
+                  [0.0, 0.0, 0.0, 0.0],
+                  [6*x1, 2.0, 0.0, 0.0],
+                  [0.0, 0.0, 0.0, 0.0]])
+        dA_dx2 = np.matrix([[0.0, 0.0, 0.0, 0.0],
+                  [3*x2**2, 2*x2, 1.0, 0.0],
+                  [0.0, 0.0, 0.0, 0.0],
+                  [6*x2, 2.0, 0.0, 0.0]])
+        df = np.array([df1, df2, dg1, dg2])
+        c = np.matrix(self.coeff).T
+
+        n = len(xvec)
+        dF = np.zeros(n)
+        for i in range(n):
+            x = np.array([xvec[i]**3, xvec[i]**2, xvec[i], 1.0])
+            d = np.linalg.solve(self.A.T, x)
+            dF_dx1 = -d*dA_dx1*c
+            dF_dx2 = -d*dA_dx2*c
+            dF_df = np.linalg.solve(self.A.T, x)
+            dF[i] = np.dot(dF_df, df) + dF_dx1[0]*dx1 + dF_dx2[0]*dx2
+
+        return dF
+
 
 
 
@@ -182,6 +228,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
                 JFD[m1:m2, n1+k] = deriv
 
                 # reset state
+                x = np.copy(x0)
                 setattr(comp, inp, x0)
                 comp.run()
 
