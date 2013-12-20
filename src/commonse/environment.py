@@ -10,8 +10,10 @@ Copyright (c) NREL. All rights reserved.
 import math
 import numpy as np
 from scipy.optimize import brentq
-from openmdao.main.api import Component, Assembly
+from openmdao.main.api import Component
 from openmdao.main.datatypes.api import Float, Array
+
+from utilities import hstack, vstack
 
 # -----------------
 #  Base Components
@@ -22,7 +24,8 @@ class WindBase(Component):
     """base component for wind speed/direction"""
 
     # in
-    z = Array(iotype='in', units='m', required=True, desc='heights where wind speed should be computed')
+    # TODO: put required=True back in here. openmdao bug.
+    z = Array(iotype='in', units='m', desc='heights where wind speed should be computed')
 
     # out
     U = Array(iotype='out', units='m/s', desc='magnitude of wind speed at each z location')
@@ -33,7 +36,8 @@ class WaveBase(Component):
     """base component for wave speed/direction"""
 
     # in
-    z = Array(iotype='in', units='m', required=True, desc='heights where wave speed should be computed')
+    # TODO: put required=True back in here. openmdao bug.
+    z = Array(iotype='in', units='m', desc='heights where wave speed should be computed')
 
     # out
     U = Array(iotype='out', units='m/s', desc='magnitude of wave speed at each z location')
@@ -65,7 +69,8 @@ class SoilBase(Component):
 
 
 class PowerWind(WindBase):
-    """power-law profile wind"""
+    """power-law profile wind.  any nodes must not cross z0, and if a node is at z0
+    it must stay at that point.  otherwise gradients crossing the boundary will be wrong."""
 
     # variables
     Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
@@ -85,31 +90,70 @@ class PowerWind(WindBase):
         z0 = self.z0
 
         # velocity
-        self.U = np.zeros_like(z)
         idx = z > z0
+        n = len(z)
+        self.U = np.zeros(n)
         self.U[idx] = self.Uref*((z[idx] - z0)/(zref - z0))**self.shearExp
         self.beta = self.betaWind*np.ones_like(z)
 
+        # # add small cubic spline to allow continuity in gradient
+        # k = 0.01  # fraction of profile with cubic spline
+        # zsmall = z0 + k*(zref - z0)
+
+        # self.spline = CubicSpline(x1=z0, x2=zsmall, f1=0.0, f2=Uref*k**shearExp,
+        #     g1=0.0, g2=Uref*k**shearExp*shearExp/(zsmall - z0))
+
+        # idx = np.logical_and(z > z0, z < zsmall)
+        # self.U[idx] = self.spline.eval(z[idx])
+
+        # self.zsmall = zsmall
+        # self.k = k
+
+
 
     def linearize(self):
+
 
         # rename
         z = self.z
         zref = self.zref
         z0 = self.z0
+        shearExp = self.shearExp
+        U = self.U
+        Uref = self.Uref
+        # zsmall = self.zsmall
+        # k = self.k
 
-        dU_dUref = np.zeros_like(z)
-        dU_dz = np.zeros_like(z)
-        dU_dzref = np.zeros_like(z)
+        # gradients
+        n = len(z)
+        dU_dUref = np.zeros(n)
+        dU_dz = np.zeros(n)
+        dU_dzref = np.zeros(n)
 
         idx = z > z0
-        dU_dUref[idx] = ((z[idx] - z0)/(zref - z0))**self.shearExp
-        dU_dz[idx] = self.U[idx]*self.shearExp * 1.0/(z[idx] - z0)
-        dU_dzref[idx] = self.U[idx]*self.shearExp * -1.0/(zref - z0)
+        dU_dUref[idx] = U[idx]/Uref
+        dU_dz[idx] = U[idx]*shearExp/(z[idx] - z0)
+        dU_dzref[idx] = -U[idx]*shearExp/(zref - z0)
 
-        # TODO: the gradient at z == z0 will always be wrong, must rethink.
 
-        self.J = np.hstack((dU_dUref.reshape(-1, 1), np.diag(dU_dz), dU_dzref.reshape(-1, 1)))
+        # # cubic spline region
+        # idx = np.logical_and(z > z0, z < zsmall)
+
+        # # d w.r.t z
+        # dU_dz[idx] = self.spline.eval_deriv(z[idx])
+
+        # # d w.r.t. Uref
+        # df2_dUref = k**shearExp
+        # dg2_dUref = k**shearExp*shearExp/(zsmall - z0)
+        # dU_dUref[idx] = self.spline.eval_deriv_params(z[idx], 0.0, 0.0, 0.0, df2_dUref, 0.0, dg2_dUref)
+
+        # # d w.r.t. zref
+        # dx2_dzref = k
+        # dg2_dzref = -Uref*k**shearExp*shearExp/k/(zref - z0)**2
+        # dU_dzref[idx] = self.spline.eval_deriv_params(z[idx], 0.0, dx2_dzref, 0.0, 0.0, 0.0, dg2_dzref)
+
+        self.J = hstack([dU_dUref, np.diag(dU_dz), dU_dzref])
+
 
 
     def provideJ(self):
@@ -128,10 +172,10 @@ class LogWind(WindBase):
     # variables
     Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
     zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
-    z0 = Float(0.0, iotype='in', units='m', required=True, desc='bottom of wind profile (height of ground/sea)')
 
     # parameters
-    z_roughness = Float(10.0, iotype='in', units='mm', required=True, desc='surface roughness length')
+    z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
+    z_roughness = Float(10.0, iotype='in', units='mm', desc='surface roughness length')
     betaWind = Float(0.0, iotype='in', units='deg', desc='wind angle relative to inertial coordinate system')
 
 
@@ -141,11 +185,11 @@ class LogWind(WindBase):
         z = self.z
         zref = self.zref
         z0 = self.z0
-        z_roughness = self.z_roughness
+        z_roughness = self.z_roughness/1e3  # convert to m
 
         # find velocity
+        idx = [z - z0 > z_roughness]
         self.U = np.zeros_like(z)
-        idx = [z > z0]
         self.U[idx] = self.Uref*np.log((z[idx] - z0)/z_roughness) / math.log((zref - z0)/z_roughness)
         self.beta = self.betaWind*np.ones_like(z)
 
@@ -156,29 +200,32 @@ class LogWind(WindBase):
         z = self.z
         zref = self.zref
         z0 = self.z0
-        z_roughness = self.z_roughness
+        z_roughness = self.z_roughness/1e3
+        Uref = self.Uref
+        # zsmall = self.zsmall
+        # k = self.k
 
-        dU_dUref = np.zeros_like(z)
-        dU_dz = np.zeros_like(z)
-        dU_dzref = np.zeros_like(z)
-        dU_dz0 = np.zeros_like(z)
+        n = len(z)
 
-        idx = z > z0
+        dU_dUref = np.zeros(n)
+        dU_dz_diag = np.zeros(n)
+        dU_dzref = np.zeros(n)
+        # dU_dz0 = np.zeros(n)
+
+        idx = [z - z0 > z_roughness]
         lt = np.log((z[idx] - z0)/z_roughness)
         lb = math.log((zref - z0)/z_roughness)
         dU_dUref[idx] = lt/lb
-        dU_dz[idx] = self.Uref/lb / (z[idx] - z0)
-        dU_dzref[idx] = -self.Uref*lt / math.log((zref - z0)/z_roughness)**2 / (zref - z0)
-        dU_dz0[idx] = self.U[idx]*(-lb/(z[idx]-z0) + lt/(zref-z0))/lb**2
+        dU_dz_diag[idx] = Uref/lb / (z[idx] - z0)
+        dU_dzref[idx] = -Uref*lt / math.log((zref - z0)/z_roughness)**2 / (zref - z0)
+        # dU_dz0[idx] = self.Uref*(-lb/(z[idx]-z0) + lt/(zref-z0))/lb**2
 
-        dU = np.hstack((dU_dUref, dU_dz, dU_dzref, dU_dz0))
-
-        self.J = np.array([dU])
+        self.J = hstack([dU_dUref, np.diag(dU_dz_diag), dU_dzref])
 
 
     def provideJ(self):
 
-        inputs = ('Uref', 'z', 'zref', 'z0')
+        inputs = ('Uref', 'z', 'zref')
         outputs = ('U',)
 
         return inputs, outputs, self.J
@@ -194,7 +241,7 @@ class LinearWaves(WaveBase):
     z_surface = Float(iotype='in', units='m', required=True, desc='vertical location of water surface')
     hs = Float(iotype='in', units='m', required=True, desc='significant wave height (crest-to-trough)')
     T = Float(iotype='in', units='s', required=True, desc='period of waves')
-    z_floor = Float(0.0, iotype='in', units='m', required=True, desc='vertical location of sea floor')
+    z_floor = Float(0.0, iotype='in', units='m', desc='vertical location of sea floor')
     g = Float(9.81, iotype='in', units='m/s**2', desc='acceleration of gravity')
     betaWave = Float(0.0, iotype='in', units='deg', desc='wave angle relative to inertial coordinate system')
 
@@ -230,10 +277,18 @@ class LinearWaves(WaveBase):
 
         # derivatives
         dU_dz = h/2.0*omega*np.sinh(k*(z_rel + d))/math.sinh(k*d)*k
-        dU_dUc = 1.0
+        dU_dUc = np.ones_like(self.z)
+        idx = np.logical_or(self.z < self.z_floor, self.z > self.z_surface)
+        dU_dz[idx] = 0.0
+        dU_dUc[idx] = 0.0
         dA_dz = omega*dU_dz
-        dA_dUc = omega
-        self.J = np.vstack([np.array([dU_dz, dU_dUc]), np.array([dA_dz, dA_dUc])])
+        dA_dUc = omega*dU_dUc
+
+        self.J = vstack([hstack([np.diag(dU_dz), dU_dUc]), hstack([np.diag(dA_dz), dA_dUc])])
+
+
+    def linearize(self):
+        pass
 
     def provideJ(self):
 
@@ -247,13 +302,13 @@ class TowerSoil(SoilBase):
     """textbook soil stiffness method"""
 
     # variable
-    r0 = Float(1.0, iotype='in', units='m', required=True, desc='radius of base of tower')
-    depth = Float(1.0, iotype='in', units='m', required=True, desc='depth of foundation in the soil')
+    r0 = Float(1.0, iotype='in', units='m', desc='radius of base of tower')
+    depth = Float(1.0, iotype='in', units='m', desc='depth of foundation in the soil')
 
     # parameter
     G = Float(140e6, iotype='in', units='Pa', desc='shear modulus of soil')
     nu = Float(0.4, iotype='in', desc='Poisson''s ratio of soil')
-    rigid = Array(iotype='in', dtype=np.bool, required=True, desc='directions that should be considered infinitely rigid\
+    rigid = Array(iotype='in', dtype=np.bool, desc='directions that should be considered infinitely rigid\
         order is x, theta_x, y, theta_y, z, theta_z')
 
 
@@ -295,7 +350,7 @@ class TowerSoil(SoilBase):
         deta_dr0 = -0.6*(1.0-nu)*h/r0**2
         dkz_dr0 = 4*G/(1.0-nu)*(eta + r0*deta_dr0)
 
-        deta_dh = -0.6*(1.0-nu)/r0
+        deta_dh = 0.6*(1.0-nu)/r0
         dkz_dh = 4*G*r0/(1.0-nu)*deta_dh
 
         # horizontal
@@ -323,7 +378,7 @@ class TowerSoil(SoilBase):
         dk_dh = np.array([dkx_dh, dkthetax_dh, dkx_dh, dkthetax_dh, dkz_dh, dkphi_dh])
         dk_dh[self.rigid] = 0.0
 
-        self.J = np.vstack((dk_dr0, dk_dh))
+        self.J = hstack((dk_dr0, dk_dh))
 
 
     def provideJ(self):
@@ -336,29 +391,16 @@ class TowerSoil(SoilBase):
 
 
 if __name__ == '__main__':
-    p = PowerWind()
+    p = LogWind()
     p.Uref = 10.0
     p.zref = 100.0
     p.z0 = 1.0
-    p.z = np.linspace(1.0, 120.0, 20)
+    p.z = np.linspace(1.0, 5, 20)
     p.shearExp = 0.2
     p.betaWind = 0.0
-    # check_gradient(p)
 
     p.run()
-    U0 = p.U[0]
 
-    p.z[0] += 1e-6
-    p.run()
-    print p.U[0]
-    print U0
-    print (p.U[0] - U0)/1e-6
-
-    # l = LogWind()
-    # l.Uref = 12.0
-    # l.zref = 100.0
-    # l.z0 = 5.0
-
-    # # parameters
-    # z_roughness = Float(10.0, iotype='in', units='mm', desc='surface roughness length')
-    # betaWind = Float(0.0
+    import matplotlib.pyplot as plt
+    plt.plot(p.z, p.U)
+    plt.show()
