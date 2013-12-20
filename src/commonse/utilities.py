@@ -8,11 +8,6 @@ Copyright (c) NREL. All rights reserved.
 """
 
 import numpy as np
-# from openmdao.main.api import VariableTree
-# from openmdao.main.datatypes.api import Array
-
-# from csystem import DirectionVector
-
 
 
 def cosd(value):
@@ -34,21 +29,14 @@ def tand(value):
 
 
 def hstack(vec):
+    """stack arrays horizontally.  useful for assemblying Jacobian"""
     return np.vstack(vec).T
 
 
 def vstack(vec):
+    """for consistently also provide the vertical stack"""
     return np.vstack(vec)
 
-
-# class Vector(VariableTree):
-
-#     x = Array()
-#     y = Array()
-#     z = Array()
-
-#     def toDirVec(self):
-#         return DirectionVector(self.x, self.y, self.z)
 
 
 class CubicSpline(object):
@@ -108,18 +96,7 @@ class CubicSpline(object):
 
 
 
-# class MassMomentInertia(VariableTree):
-
-#     xx = Float(units='kg*m**2', desc='mass moment of inertia about x-axis')
-#     yy = Float(units='kg*m**2', desc='mass moment of inertia about y-axis')
-#     zz = Float(units='kg*m**2', desc='mass moment of inertia about z-axis')
-#     xy = Float(units='kg*m**2', desc='mass x-y product of inertia')
-#     xz = Float(units='kg*m**2', desc='mass x-z product of inertia')
-#     yz = Float(units='kg*m**2', desc='mass y-z product of inertia')
-
-
 def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
-
 
     comp.run()
     comp.linearize()
@@ -127,10 +104,10 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
     # compute size of Jacobian
     m = 0
-    mvec = []
-    cmvec = []
-    nvec = []
-    cnvec = []
+    mvec = []  # size of each output
+    cmvec = []  # cumulative size of outputs
+    nvec = []  # size of each input
+    cnvec = []  # cumulative size of inputs
     for out in outputs:
         f = getattr(comp, out)
         if np.array(f).shape == ():
@@ -157,7 +134,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
         raise TypeError('Incorrect Jacobian size. Your provided Jacobian is of shape {}, but it should be ({}, {})'.format(J.shape, m, n))
 
 
-    # initialize indices
+    # initialize start and end indices of where to insert into Jacobian
     m1 = 0
     m2 = 0
 
@@ -241,7 +218,7 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
     errorvec = []
 
     if display:
-        print '{:<20} ({}) {:<20} ({}, {})'.format('error', 'errortype', 'name', 'analytic', 'fd')
+        print '{:<20} ({}) {:<10} ({}, {})'.format('error', 'errortype', 'name', 'analytic', 'fd')
         print
 
     for i in range(m):
