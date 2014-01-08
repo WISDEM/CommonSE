@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------------
 # Name:        SegIntersect.py
-# Purpose: It Calculates Intersection of 2 segments in space
+# Purpose: It Calculates Intersection of 2 segments in space. Also contains a simple 2-point distance calculator.
 #
 # Author:      RRD
 #
@@ -11,6 +11,12 @@
 
 
 import numpy as np
+
+def CalcDist(X1,X2):
+    """This function returns the distance (norm) between the two points X1(x1,y1,z1) and X2(x2,y2,z2).
+    X1 and X2 can be [3,n] arrays."""
+    junk=X2-X1
+    return np.sqrt(np.sum(junk**2,0))
 
 
 def SegIntersect(A1, A2, B1, B2):
