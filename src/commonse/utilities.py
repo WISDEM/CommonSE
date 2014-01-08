@@ -257,11 +257,17 @@ def smooth_abs(x, dx=0.01):
     idx = np.logical_and(x > -dx, x < dx)
     y[idx] = x[idx]**2/(2.0*dx) + dx/2.0
 
+    # gradient
+    dydx = np.ones_like(x)
+    dydx[x <= -dx] = -1.0
+    dydx[idx] = x[idx]/dx
+
 
     if n == 1:
         y = y[0]
+        dydx = dydx[0]
 
-    return y
+    return y, dydx
 
 
 
