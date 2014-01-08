@@ -56,6 +56,15 @@ def vstack(vec):
     return np.vstack(newvec)
 
 
+def _checkIfFloat(x):
+    try:
+        n = len(x)
+    except TypeError:  # if x is just a float
+        x = np.array([x])
+        n = 1
+
+    return x, n
+
 
 def linspace_with_deriv(start, stop, num):
 
@@ -77,11 +86,7 @@ def linspace_with_deriv(start, stop, num):
 def interp_with_deriv(x, xp, yp):
     # TODO: put in Fortran to speed up
 
-    try:
-        n = len(x)
-    except TypeError:  # if x is just a float
-        x = np.array([x])
-        n = 1
+    x, n = _checkIfFloat(x)
 
     if np.any(np.diff(xp) < 0):
         raise TypeError('xp must be in ascending order')
@@ -123,11 +128,7 @@ def interp_with_deriv(x, xp, yp):
 
 def cubic_with_deriv(x, xp, yp):
 
-    try:
-        n = len(x)
-    except TypeError:  # if x is just a float
-        x = np.array([x])
-        n = 1
+    x, n = _checkIfFloat(x)
 
     if np.any(np.diff(xp) < 0):
         raise TypeError('xp must be in ascending order')
@@ -194,6 +195,8 @@ def cubic_with_deriv(x, xp, yp):
 
 def smooth_max(yd, ymax, pct_offset=0.01, max_on_right=True, dyd=None):
 
+    yd, n = _checkIfFloat(yd)
+
     y1 = (1-pct_offset)*ymax
     y2 = (1+pct_offset)*ymax
 
@@ -228,6 +231,10 @@ def smooth_max(yd, ymax, pct_offset=0.01, max_on_right=True, dyd=None):
     # constant region
     ya[idx_constant] = ymax
     dya_dyd[idx_constant] = 0.0
+
+    if n == 1:
+        ya = ya[0]
+        dya_dyd = dya_dyd[0]
 
 
     return ya, dya_dyd
