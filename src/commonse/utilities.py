@@ -346,6 +346,18 @@ def _setvar(comp, name, value):
     setattr(base, vars[-1], value)
 
 
+def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
+
+    names, errors = check_gradient(comp, fd, step_size, tol, display)
+
+    for name, err in zip(names, errors):
+        try:
+            unittest.assertLessEqual(err, tol)
+        except AssertionError, e:
+            print '*** error in:', name
+            raise e
+
+
 def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
     comp.run()
