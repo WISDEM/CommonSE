@@ -193,21 +193,21 @@ def cubic_with_deriv(x, xp, yp):
     return y
 
 
-def smooth_max(yd, ymax, pct_offset=0.01, max_on_right=True, dyd=None):
+def _smooth_maxmin(yd, ymax, maxmin, pct_offset=0.01, dyd=None):
 
     yd, n = _checkIfFloat(yd)
 
     y1 = (1-pct_offset)*ymax
     y2 = (1+pct_offset)*ymax
 
-    if max_on_right:
+    if maxmin == 'min':
         f1 = y1
         f2 = ymax
         g1 = 1.0
         g2 = 0.0
         idx_constant = yd >= y2
 
-    else:
+    elif maxmin == 'max':
         f1 = ymax
         f2 = y2
         g1 = 0.0
@@ -240,30 +240,23 @@ def smooth_max(yd, ymax, pct_offset=0.01, max_on_right=True, dyd=None):
     return ya, dya_dyd
 
 
-def smooth_min(yd, ymin, pct_offset=0.01, min_on_right=True, dyd=None):
-    return smooth_max(yd, ymin, pct_offset, min_on_right, dyd)
+def smooth_max(yd, ymax, pct_offset=0.01, dyd=None):
+    return _smooth_maxmin(yd, ymax, 'max', pct_offset, dyd)
 
 
-def smooth_abs(x, dx=0.1):
+def smooth_min(yd, ymin, pct_offset=0.01, dyd=None):
+    return _smooth_maxmin(yd, ymin, 'min', pct_offset, dyd)
 
-    # dx = x_offset
-    # f = CubicSplineSegment(dx, -dx, dx, dx, 1.0, -1.0)
 
-    try:
-        n = len(x)
-    except TypeError:  # if x is just a float
-        x = np.array([x])
-        n = 1
+
+def smooth_abs(x, dx=0.01):
+
+    x, n = _checkIfFloat(x)
 
     y = np.abs(x)
     idx = np.logical_and(x > -dx, x < dx)
     y[idx] = x[idx]**2/(2.0*dx) + dx/2.0
 
-    # y = np.copy(x)
-    # idx = np.logical_and(x < dx, x > -dx)
-    # y[idx] = f.eval(x[idx])
-    # idx = x < -dx
-    # y[idx] = -x[idx]
 
     if n == 1:
         y = y[0]
@@ -540,17 +533,19 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    xpt = np.array([1.0, 2.0, 4.0, 6.0, 10.0, 12.0])
-    ypt = np.array([5.0, 12.0, 14.0, 16.0, 21.0, 29.0])
 
-    # interpolate  (extrapolation will work, but beware the results may be silly)
-    n = 50
-    x = np.linspace(0.0, 13.0, n)
-    y = cubic_with_deriv(x, xpt, ypt)
 
-    import matplotlib.pyplot as plt
-    plt.plot(xpt, ypt, 'o')
-    plt.plot(x, y, '-')
-    plt.show()
+    # xpt = np.array([1.0, 2.0, 4.0, 6.0, 10.0, 12.0])
+    # ypt = np.array([5.0, 12.0, 14.0, 16.0, 21.0, 29.0])
+
+    # # interpolate  (extrapolation will work, but beware the results may be silly)
+    # n = 50
+    # x = np.linspace(0.0, 13.0, n)
+    # y = cubic_with_deriv(x, xpt, ypt)
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(xpt, ypt, 'o')
+    # plt.plot(x, y, '-')
+    # plt.show()
