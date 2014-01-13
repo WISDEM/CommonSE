@@ -17,6 +17,6 @@ from csmPPI import *
 ref_yr  = 2002
 ref_mon =    9
 curr_yr = 2009
-curr_mon =  13
+curr_mon =  12
 
 ppi = PPI(ref_yr,ref_mon,curr_yr,curr_mon)
