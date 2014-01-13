@@ -345,6 +345,31 @@ def _setvar(comp, name, value):
     setattr(base, vars[-1], value)
 
 
+def _getColumnOfOutputs(comp, outputs, m):
+
+    # fill out column of outputs
+    m1 = 0
+    m2 = 0
+    f = np.zeros(m)
+    for i, out in enumerate(outputs):
+
+        # get function value at center
+        fsub = _getvar(comp, out)
+        if np.array(fsub).shape == ():
+            lenf = 1
+        else:
+            fsub = np.copy(fsub)  # so not pointed to same memory address
+            lenf = len(fsub)
+
+        m2 += lenf
+
+        f[m1:m2] = fsub
+
+        m1 = m2
+
+    return f
+
+
 def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
     names, errors = check_gradient(comp, fd, step_size, tol, display)
@@ -395,84 +420,69 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
         raise TypeError('Incorrect Jacobian size. Your provided Jacobian is of shape {}, but it should be ({}, {})'.format(J.shape, m, n))
 
 
-    # initialize start and end indices of where to insert into Jacobian
-    m1 = 0
-    m2 = 0
+    # fill out column of outputs
+    f = _getColumnOfOutputs(comp, outputs, m)
 
+    n1 = 0
 
-    for i, out in enumerate(outputs):
+    for j, inp in enumerate(inputs):
 
-        # get function value at center
-        f = _getvar(comp, out)
-        if np.array(f).shape == ():
-            lenf = 1
+        # get x value at center (save location)
+        x = _getvar(comp, inp)
+        if np.array(x).shape == ():
+            x0 = x
+            lenx = 1
         else:
-            f = np.copy(f)  # so not pointed to same memory address
-            lenf = len(f)
+            x = np.copy(x)  # so not pointing to same memory address
+            x0 = np.copy(x)
+            lenx = len(x)
 
-        m2 += lenf
+        for k in range(lenx):
 
-        n1 = 0
-
-        for j, inp in enumerate(inputs):
-
-            # get x value at center (save location)
-            x = _getvar(comp, inp)
-            if np.array(x).shape == ():
-                x0 = x
-                lenx = 1
+            # take a step
+            if lenx == 1:
+                h = step_size*x
+                if h == 0:
+                    h = step_size
+                x += h
             else:
-                x = np.copy(x)  # so not pointing to same memory address
-                x0 = np.copy(x)
-                lenx = len(x)
+                h = step_size*x[k]
+                if h == 0:
+                    h = step_size
+                x[k] += h
+            _setvar(comp, inp, x)
+            comp.run()
 
-            for k in range(lenx):
+            # fd
+            fp = _getColumnOfOutputs(comp, outputs, m)
 
-                # take a step
+            if fd == 'central':
+
+                # step back
                 if lenx == 1:
-                    h = step_size*x
-                    if h == 0:
-                        h = step_size
-                    x += h
+                    x -= 2*h
                 else:
-                    h = step_size*x[k]
-                    if h == 0:
-                        h = step_size
-                    x[k] += h
+                    x[k] -= 2*h
                 _setvar(comp, inp, x)
                 comp.run()
 
-                # fd
-                fp = np.copy(_getvar(comp, out))
+                fm = _getColumnOfOutputs(comp, outputs, m)
 
-                if fd == 'central':
+                deriv = (fp - fm)/(2*h)
 
-                    # step back
-                    if lenx == 1:
-                        x -= 2*h
-                    else:
-                        x[k] -= 2*h
-                    _setvar(comp, inp, x)
-                    comp.run()
-
-                    fm = np.copy(_getvar(comp, out))
-
-                    deriv = (fp - fm)/(2*h)
-
-                else:
-                    deriv = (fp - f)/h
+            else:
+                deriv = (fp - f)/h
 
 
-                JFD[m1:m2, n1+k] = deriv
+            JFD[:, n1+k] = deriv
 
-                # reset state
-                x = np.copy(x0)
-                _setvar(comp, inp, x0)
-                comp.run()
+            # reset state
+            x = np.copy(x0)
+            _setvar(comp, inp, x0)
+            comp.run()
 
-            n1 += lenx
+        n1 += lenx
 
-        m1 = m2
 
     # error checking
     namevec = []
