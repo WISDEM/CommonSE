@@ -193,21 +193,21 @@ def cubic_with_deriv(x, xp, yp):
     return y
 
 
-def smooth_max(yd, ymax, pct_offset=0.01, max_on_right=True, dyd=None):
+def _smooth_maxmin(yd, ymax, maxmin, pct_offset=0.01, dyd=None):
 
     yd, n = _checkIfFloat(yd)
 
     y1 = (1-pct_offset)*ymax
     y2 = (1+pct_offset)*ymax
 
-    if max_on_right:
+    if maxmin == 'min':
         f1 = y1
         f2 = ymax
         g1 = 1.0
         g2 = 0.0
         idx_constant = yd >= y2
 
-    else:
+    elif maxmin == 'max':
         f1 = ymax
         f2 = y2
         g1 = 0.0
@@ -240,35 +240,34 @@ def smooth_max(yd, ymax, pct_offset=0.01, max_on_right=True, dyd=None):
     return ya, dya_dyd
 
 
-def smooth_min(yd, ymin, pct_offset=0.01, min_on_right=True, dyd=None):
-    return smooth_max(yd, ymin, pct_offset, min_on_right, dyd)
+def smooth_max(yd, ymax, pct_offset=0.01, dyd=None):
+    return _smooth_maxmin(yd, ymax, 'max', pct_offset, dyd)
 
 
-def smooth_abs(x, dx=0.1):
+def smooth_min(yd, ymin, pct_offset=0.01, dyd=None):
+    return _smooth_maxmin(yd, ymin, 'min', pct_offset, dyd)
 
-    # dx = x_offset
-    # f = CubicSplineSegment(dx, -dx, dx, dx, 1.0, -1.0)
 
-    try:
-        n = len(x)
-    except TypeError:  # if x is just a float
-        x = np.array([x])
-        n = 1
+
+def smooth_abs(x, dx=0.01):
+
+    x, n = _checkIfFloat(x)
 
     y = np.abs(x)
     idx = np.logical_and(x > -dx, x < dx)
     y[idx] = x[idx]**2/(2.0*dx) + dx/2.0
 
-    # y = np.copy(x)
-    # idx = np.logical_and(x < dx, x > -dx)
-    # y[idx] = f.eval(x[idx])
-    # idx = x < -dx
-    # y[idx] = -x[idx]
+    # gradient
+    dydx = np.ones_like(x)
+    dydx[x <= -dx] = -1.0
+    dydx[idx] = x[idx]/dx
+
 
     if n == 1:
         y = y[0]
+        dydx = dydx[0]
 
-    return y
+    return y, dydx
 
 
 
@@ -346,6 +345,31 @@ def _setvar(comp, name, value):
     setattr(base, vars[-1], value)
 
 
+def _getColumnOfOutputs(comp, outputs, m):
+
+    # fill out column of outputs
+    m1 = 0
+    m2 = 0
+    f = np.zeros(m)
+    for i, out in enumerate(outputs):
+
+        # get function value at center
+        fsub = _getvar(comp, out)
+        if np.array(fsub).shape == ():
+            lenf = 1
+        else:
+            fsub = np.copy(fsub)  # so not pointed to same memory address
+            lenf = len(fsub)
+
+        m2 += lenf
+
+        f[m1:m2] = fsub
+
+        m1 = m2
+
+    return f
+
+
 def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
     names, errors = check_gradient(comp, fd, step_size, tol, display)
@@ -396,84 +420,69 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
         raise TypeError('Incorrect Jacobian size. Your provided Jacobian is of shape {}, but it should be ({}, {})'.format(J.shape, m, n))
 
 
-    # initialize start and end indices of where to insert into Jacobian
-    m1 = 0
-    m2 = 0
+    # fill out column of outputs
+    f = _getColumnOfOutputs(comp, outputs, m)
 
+    n1 = 0
 
-    for i, out in enumerate(outputs):
+    for j, inp in enumerate(inputs):
 
-        # get function value at center
-        f = _getvar(comp, out)
-        if np.array(f).shape == ():
-            lenf = 1
+        # get x value at center (save location)
+        x = _getvar(comp, inp)
+        if np.array(x).shape == ():
+            x0 = x
+            lenx = 1
         else:
-            f = np.copy(f)  # so not pointed to same memory address
-            lenf = len(f)
+            x = np.copy(x)  # so not pointing to same memory address
+            x0 = np.copy(x)
+            lenx = len(x)
 
-        m2 += lenf
+        for k in range(lenx):
 
-        n1 = 0
-
-        for j, inp in enumerate(inputs):
-
-            # get x value at center (save location)
-            x = _getvar(comp, inp)
-            if np.array(x).shape == ():
-                x0 = x
-                lenx = 1
+            # take a step
+            if lenx == 1:
+                h = step_size*x
+                if h == 0:
+                    h = step_size
+                x += h
             else:
-                x = np.copy(x)  # so not pointing to same memory address
-                x0 = np.copy(x)
-                lenx = len(x)
+                h = step_size*x[k]
+                if h == 0:
+                    h = step_size
+                x[k] += h
+            _setvar(comp, inp, x)
+            comp.run()
 
-            for k in range(lenx):
+            # fd
+            fp = _getColumnOfOutputs(comp, outputs, m)
 
-                # take a step
+            if fd == 'central':
+
+                # step back
                 if lenx == 1:
-                    h = step_size*x
-                    if h == 0:
-                        h = step_size
-                    x += h
+                    x -= 2*h
                 else:
-                    h = step_size*x[k]
-                    if h == 0:
-                        h = step_size
-                    x[k] += h
+                    x[k] -= 2*h
                 _setvar(comp, inp, x)
                 comp.run()
 
-                # fd
-                fp = np.copy(_getvar(comp, out))
+                fm = _getColumnOfOutputs(comp, outputs, m)
 
-                if fd == 'central':
+                deriv = (fp - fm)/(2*h)
 
-                    # step back
-                    if lenx == 1:
-                        x -= 2*h
-                    else:
-                        x[k] -= 2*h
-                    _setvar(comp, inp, x)
-                    comp.run()
-
-                    fm = np.copy(_getvar(comp, out))
-
-                    deriv = (fp - fm)/(2*h)
-
-                else:
-                    deriv = (fp - f)/h
+            else:
+                deriv = (fp - f)/h
 
 
-                JFD[m1:m2, n1+k] = deriv
+            JFD[:, n1+k] = deriv
 
-                # reset state
-                x = np.copy(x0)
-                _setvar(comp, inp, x0)
-                comp.run()
+            # reset state
+            x = np.copy(x0)
+            _setvar(comp, inp, x0)
+            comp.run()
 
-            n1 += lenx
+        n1 += lenx
 
-        m1 = m2
 
     # error checking
     namevec = []
@@ -540,17 +549,19 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    xpt = np.array([1.0, 2.0, 4.0, 6.0, 10.0, 12.0])
-    ypt = np.array([5.0, 12.0, 14.0, 16.0, 21.0, 29.0])
 
-    # interpolate  (extrapolation will work, but beware the results may be silly)
-    n = 50
-    x = np.linspace(0.0, 13.0, n)
-    y = cubic_with_deriv(x, xpt, ypt)
 
-    import matplotlib.pyplot as plt
-    plt.plot(xpt, ypt, 'o')
-    plt.plot(x, y, '-')
-    plt.show()
+    # xpt = np.array([1.0, 2.0, 4.0, 6.0, 10.0, 12.0])
+    # ypt = np.array([5.0, 12.0, 14.0, 16.0, 21.0, 29.0])
+
+    # # interpolate  (extrapolation will work, but beware the results may be silly)
+    # n = 50
+    # x = np.linspace(0.0, 13.0, n)
+    # y = cubic_with_deriv(x, xpt, ypt)
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(xpt, ypt, 'o')
+    # plt.plot(x, y, '-')
+    # plt.show()
