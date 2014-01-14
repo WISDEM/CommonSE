@@ -384,9 +384,9 @@ def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1
 
 def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
+    inputs, outputs = comp.list_deriv_vars()
     comp.run()
-    comp.linearize()
-    inputs, outputs, J = comp.provideJ()
+    J = comp.provideJ()
 
     # compute size of Jacobian
     m = 0
