@@ -25,6 +25,11 @@ class WindBase(Component):
 
     # in
     # TODO: put required=True back in here. openmdao bug.
+
+    # TODO: if I put required=True here for Uref there is another bug
+    Uref = Float(iotype='in', units='m/s', desc='reference wind speed (usually at hub height)')
+    zref = Float(iotype='in', units='m', desc='corresponding reference height')
+    z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
     z = Array(iotype='in', units='m', desc='heights where wind speed should be computed')
 
     # out
@@ -72,12 +77,12 @@ class PowerWind(WindBase):
     """power-law profile wind.  any nodes must not cross z0, and if a node is at z0
     it must stay at that point.  otherwise gradients crossing the boundary will be wrong."""
 
-    # variables
-    Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
-    zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
+    # # variables
+    # Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
+    # zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
 
     # parameters
-    z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
+    # z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
     shearExp = Float(0.2, iotype='in', desc='shear exponent')
     betaWind = Float(0.0, iotype='in', units='deg', desc='wind angle relative to inertial coordinate system')
 
@@ -170,11 +175,11 @@ class LogWind(WindBase):
     """logarithmic-profile wind"""
 
     # variables
-    Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
-    zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
+    # Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
+    # zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
 
     # parameters
-    z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
+    # z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
     z_roughness = Float(10.0, iotype='in', units='mm', desc='surface roughness length')
     betaWind = Float(0.0, iotype='in', units='deg', desc='wind angle relative to inertial coordinate system')
 
