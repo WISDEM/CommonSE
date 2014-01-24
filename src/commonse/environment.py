@@ -23,14 +23,15 @@ from utilities import hstack, vstack
 class WindBase(Component):
     """base component for wind speed/direction"""
 
-    # in
-    # TODO: put required=True back in here. openmdao bug.
-
     # TODO: if I put required=True here for Uref there is another bug
+
+    # variables
     Uref = Float(iotype='in', units='m/s', desc='reference wind speed (usually at hub height)')
     zref = Float(iotype='in', units='m', desc='corresponding reference height')
-    z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
     z = Array(iotype='in', units='m', desc='heights where wind speed should be computed')
+
+    # parameters
+    z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
 
     # out
     U = Array(iotype='out', units='m/s', desc='magnitude of wind speed at each z location')
@@ -40,8 +41,7 @@ class WindBase(Component):
 class WaveBase(Component):
     """base component for wave speed/direction"""
 
-    # in
-    # TODO: put required=True back in here. openmdao bug.
+    # variables
     z = Array(iotype='in', units='m', desc='heights where wave speed should be computed')
 
     # out
@@ -49,6 +49,7 @@ class WaveBase(Component):
     A = Array(iotype='out', units='m/s**2', desc='magnitude of wave acceleration at each z location')
     beta = Array(iotype='out', units='deg', desc='corresponding wave angles relative to inertial coordinate system')
 
+    missing_deriv_policy = 'assume_zero'
 
     def execute(self):
         """default to no waves"""
@@ -77,14 +78,11 @@ class PowerWind(WindBase):
     """power-law profile wind.  any nodes must not cross z0, and if a node is at z0
     it must stay at that point.  otherwise gradients crossing the boundary will be wrong."""
 
-    # # variables
-    # Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
-    # zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
-
     # parameters
-    # z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
     shearExp = Float(0.2, iotype='in', desc='shear exponent')
     betaWind = Float(0.0, iotype='in', units='deg', desc='wind angle relative to inertial coordinate system')
+
+    missing_deriv_policy = 'assume_zero'
 
 
     def execute(self):
@@ -115,9 +113,15 @@ class PowerWind(WindBase):
         # self.k = k
 
 
+    def list_deriv_vars(self):
 
-    def linearize(self):
+        inputs = ('Uref', 'z', 'zref')
+        outputs = ('U',)
 
+        return inputs, outputs
+
+
+    def provideJ(self):
 
         # rename
         z = self.z
@@ -126,8 +130,6 @@ class PowerWind(WindBase):
         shearExp = self.shearExp
         U = self.U
         Uref = self.Uref
-        # zsmall = self.zsmall
-        # k = self.k
 
         # gradients
         n = len(z)
@@ -157,16 +159,9 @@ class PowerWind(WindBase):
         # dg2_dzref = -Uref*k**shearExp*shearExp/k/(zref - z0)**2
         # dU_dzref[idx] = self.spline.eval_deriv_params(z[idx], 0.0, dx2_dzref, 0.0, 0.0, 0.0, dg2_dzref)
 
-        self.J = hstack([dU_dUref, np.diag(dU_dz), dU_dzref])
+        J = hstack([dU_dUref, np.diag(dU_dz), dU_dzref])
 
-
-
-    def provideJ(self):
-
-        inputs = ('Uref', 'z', 'zref')
-        outputs = ('U',)
-
-        return inputs, outputs, self.J
+        return J
 
 
 
@@ -174,15 +169,11 @@ class PowerWind(WindBase):
 class LogWind(WindBase):
     """logarithmic-profile wind"""
 
-    # variables
-    # Uref = Float(iotype='in', units='m/s', required=True, desc='reference velocity of power-law model')
-    # zref = Float(iotype='in', units='m', required=True, desc='corresponding reference height')
-
     # parameters
-    # z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
     z_roughness = Float(10.0, iotype='in', units='mm', desc='surface roughness length')
     betaWind = Float(0.0, iotype='in', units='deg', desc='wind angle relative to inertial coordinate system')
 
+    missing_deriv_policy = 'assume_zero'
 
     def execute(self):
 
@@ -199,7 +190,15 @@ class LogWind(WindBase):
         self.beta = self.betaWind*np.ones_like(z)
 
 
-    def linearize(self):
+    def list_deriv_vars(self):
+
+        inputs = ('Uref', 'z', 'zref')
+        outputs = ('U',)
+
+        return inputs, outputs
+
+
+    def provideJ(self):
 
         # rename
         z = self.z
@@ -207,15 +206,12 @@ class LogWind(WindBase):
         z0 = self.z0
         z_roughness = self.z_roughness/1e3
         Uref = self.Uref
-        # zsmall = self.zsmall
-        # k = self.k
 
         n = len(z)
 
         dU_dUref = np.zeros(n)
         dU_dz_diag = np.zeros(n)
         dU_dzref = np.zeros(n)
-        # dU_dz0 = np.zeros(n)
 
         idx = [z - z0 > z_roughness]
         lt = np.log((z[idx] - z0)/z_roughness)
@@ -223,17 +219,11 @@ class LogWind(WindBase):
         dU_dUref[idx] = lt/lb
         dU_dz_diag[idx] = Uref/lb / (z[idx] - z0)
         dU_dzref[idx] = -Uref*lt / math.log((zref - z0)/z_roughness)**2 / (zref - z0)
-        # dU_dz0[idx] = self.Uref*(-lb/(z[idx]-z0) + lt/(zref-z0))/lb**2
 
-        self.J = hstack([dU_dUref, np.diag(dU_dz_diag), dU_dzref])
+        J = hstack([dU_dUref, np.diag(dU_dz_diag), dU_dzref])
 
+        return J
 
-    def provideJ(self):
-
-        inputs = ('Uref', 'z', 'zref')
-        outputs = ('U',)
-
-        return inputs, outputs, self.J
 
 
 class LinearWaves(WaveBase):
@@ -292,15 +282,17 @@ class LinearWaves(WaveBase):
         self.J = vstack([hstack([np.diag(dU_dz), dU_dUc]), hstack([np.diag(dA_dz), dA_dUc])])
 
 
-    def linearize(self):
-        pass
-
-    def provideJ(self):
+    def list_deriv_vars(self):
 
         inputs = ('z', 'Uc')
         outputs = ('U', 'A')
 
-        return inputs, outputs, self.J
+        return inputs, outputs
+
+
+    def provideJ(self):
+
+        return self.J
 
 
 class TowerSoil(SoilBase):
@@ -315,6 +307,8 @@ class TowerSoil(SoilBase):
     nu = Float(0.4, iotype='in', desc='Poisson''s ratio of soil')
     rigid = Array(iotype='in', dtype=np.bool, desc='directions that should be considered infinitely rigid\
         order is x, theta_x, y, theta_y, z, theta_z')
+
+    missing_deriv_policy = 'assume_zero'
 
 
     def execute(self):
@@ -343,7 +337,15 @@ class TowerSoil(SoilBase):
         self.k[self.rigid] = float('inf')
 
 
-    def linearize(self):
+    def list_deriv_vars(self):
+
+        inputs = ('r0', 'depth')
+        outputs = ('k',)
+
+        return inputs, outputs
+
+
+    def provideJ(self):
 
         G = self.G
         nu = self.nu
@@ -383,15 +385,12 @@ class TowerSoil(SoilBase):
         dk_dh = np.array([dkx_dh, dkthetax_dh, dkx_dh, dkthetax_dh, dkz_dh, dkphi_dh])
         dk_dh[self.rigid] = 0.0
 
-        self.J = hstack((dk_dr0, dk_dh))
+        J = hstack((dk_dr0, dk_dh))
+
+        return J
 
 
-    def provideJ(self):
 
-        inputs = ('r0', 'depth')
-        outputs = ('k',)
-
-        return inputs, outputs, self.J
 
 
 

@@ -203,7 +203,7 @@ class TestSoil(unittest.TestCase):
         soil.nu = 0.4
         soil.rigid = [False, False, False, False, False, False]
 
-        names, errors = check_gradient(soil, display=True)
+        names, errors = check_gradient(soil)
 
         tol = 1e-6
         for name, err in zip(names, errors):
