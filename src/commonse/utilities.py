@@ -441,13 +441,13 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
 
             # take a step
             if lenx == 1:
-                h = step_size*x
-                if h == 0:
+                h = np.abs(step_size*x)
+                if h < step_size:
                     h = step_size
                 x += h
             else:
-                h = step_size*x[k]
-                if h == 0:
+                h = np.abs(step_size*x[k])
+                if h < step_size:
                     h = step_size
                 x[k] += h
             _setvar(comp, inp, x)
