@@ -10,23 +10,63 @@ Copyright (c) NREL. All rights reserved.
 import numpy as np
 
 
-# !!!!!!!! NOTE ALL ANGLES SHOULD BE PASSED IN DEGREES !!!!!!!!!!!!!!
-def _rotateAboutZ(x, y, z, theta):
-    """
-    x X y = z.  rotate c.s. about z, +theta
-    all angles in degrees
-    """
+# # !!!!!!!! NOTE ALL ANGLES SHOULD BE PASSED IN DEGREES !!!!!!!!!!!!!!
+# def _rotateAboutZ(x, y, z, theta):
+#     """
+#     x X y = z.  rotate c.s. about z, +theta
+#     all angles in degrees
+#     """
 
-    theta = np.radians(theta)
-    c = np.cos(theta)
-    s = np.sin(theta)
+#     theta = np.radians(theta)
+#     c = np.cos(theta)
+#     s = np.sin(theta)
 
-    xnew = x*c + y*s
-    ynew = -x*s + y*c
+#     xnew = x*c + y*s
+#     ynew = -x*s + y*c
 
-    return xnew, ynew, z
+#     return xnew, ynew, z
 
 
+# def _derivatives(obj, xstring, ystring, zstring, theta, rotateOtherWay):
+
+#     x = getattr(obj, xstring)
+#     y = getattr(obj, ystring)
+
+#     xstring = 'd' + xstring
+#     ystring = 'd' + ystring
+#     zstring = 'd' + zstring
+
+#     thetaM = 1.0
+#     if rotateOtherWay:
+#         thetaM = -1.0
+#     theta *= thetaM
+
+#     theta = np.radians(theta)
+#     c = np.cos(theta)
+#     s = np.sin(theta)
+
+#     one = np.ones_like(x)
+#     zero = np.zeros_like(x)
+
+#     dxnew = {}
+#     dxnew[xstring] = c
+#     dxnew[ystring] = s
+#     dxnew[zstring] = zero
+#     dxnew['dtheta'] = (-x*s + y*c)*np.radians(thetaM)
+
+#     dynew = {}
+#     dynew[xstring] = -s
+#     dynew[ystring] = c
+#     dynew[zstring] = zero
+#     dynew['dtheta'] = (-x*c - y*s)*np.radians(thetaM)
+
+#     dznew = {}
+#     dznew[xstring] = zero
+#     dznew[ystring] = zero
+#     dznew[zstring] = one
+#     dznew['dtheta'] = zero
+
+#     return dxnew, dynew, dznew
 
 
 
@@ -37,7 +77,7 @@ class DirectionVector(object):
 
     """
 
-    def __init__(self, x, y, z):
+    def __init__(self, x, y, z, dx=None, dy=None, dz=None):
         """3-Dimensional vector that depends on direction only (not position).
 
         Parameters
@@ -54,6 +94,27 @@ class DirectionVector(object):
         self.x = np.array(x)
         self.y = np.array(y)
         self.z = np.array(z)
+
+        if dx is None:
+            dx = {}
+            dx['dx'] = np.ones_like(self.x)
+            dx['dy'] = np.zeros_like(self.y)
+            dx['dz'] = np.zeros_like(self.z)
+
+            dy = {}
+            dy['dx'] = np.zeros_like(self.x)
+            dy['dy'] = np.ones_like(self.y)
+            dy['dz'] = np.zeros_like(self.z)
+
+            dz = {}
+            dz['dx'] = np.zeros_like(self.x)
+            dz['dy'] = np.zeros_like(self.y)
+            dz['dz'] = np.ones_like(self.z)
+
+        self.dx = dx
+        self.dy = dy
+        self.dz = dz
+
 
 
     @classmethod
@@ -83,6 +144,68 @@ class DirectionVector(object):
         return np.array([self.x, self.y, self.z])
 
 
+
+    def _rotateAboutZ(self, xstring, ystring, zstring, theta, thetaname, reverse=False):
+        """
+        x X y = z.  rotate c.s. about z, +theta
+        all angles in degrees
+        """
+
+        thetaM = 1.0
+        if reverse:
+            thetaM = -1.0
+
+        x = getattr(self, xstring)
+        y = getattr(self, ystring)
+        z = getattr(self, zstring)
+        dx = getattr(self, 'd' + xstring)
+        dy = getattr(self, 'd' + ystring)
+        dz = getattr(self, 'd' + zstring)
+
+        theta = np.radians(theta * thetaM)
+        c = np.cos(theta)
+        s = np.sin(theta)
+
+        xnew = x*c + y*s
+        ynew = -x*s + y*c
+        znew = z
+
+        angles = []
+        for key in dx.keys():
+            if not key in ['dx', 'dy', 'dz']:
+                angles.append(key)
+
+        dxnew = {}
+        dxnew['dx'] = dx['dx']*c + dy['dx']*s
+        dxnew['dy'] = dx['dy']*c + dy['dy']*s
+        dxnew['dz'] = dx['dz']*c + dy['dz']*s
+        dxnew['d' + thetaname] = (-x*s + y*c)*np.radians(thetaM)
+        for dangle in angles:
+            dxnew[dangle] = dx[dangle]*c + dy[dangle]*s
+
+        dynew = {}
+        dynew['dx'] = -dx['dx']*s + dy['dx']*c
+        dynew['dy'] = -dx['dy']*s + dy['dy']*c
+        dynew['dz'] = -dx['dz']*s + dy['dz']*c
+        dynew['d' + thetaname] = (-x*c - y*s)*np.radians(thetaM)
+        for dangle in angles:
+            dynew[dangle] = -dx[dangle]*s + dy[dangle]*c
+
+        dznew = {}
+        dznew['dx'] = dz['dx']*np.ones_like(theta)  # multiply by ones just to get right size in case of float
+        dznew['dy'] = dz['dy']*np.ones_like(theta)
+        dznew['dz'] = dz['dz']*np.ones_like(theta)
+        dznew['d' + thetaname] = np.zeros_like(theta)
+        for dangle in angles:
+            dznew[dangle] = dz[dangle]
+
+
+        return xnew, ynew, znew, dxnew, dynew, dznew
+
+
+
+
+
     def windToInertial(self, beta):
         """Rotates from wind-aligned to inertial
 
@@ -97,8 +220,11 @@ class DirectionVector(object):
             a DirectionVector in the inertial coordinate system
 
         """
-        xi, yi, zi = _rotateAboutZ(self.x, self.y, self.z, -beta)
-        return DirectionVector(xi, yi, zi)
+        # xi, yi, zi = _rotateAboutZ(self.x, self.y, self.z, -beta)
+        # return DirectionVector(xi, yi, zi)
+
+        xw, yw, zw, dxw, dyw, dzw = self._rotateAboutZ('x', 'y', 'z', beta, 'beta', reverse=True)
+        return DirectionVector(xw, yw, zw, dxw, dyw, dzw)
 
 
     def inertialToWind(self, beta):
@@ -115,8 +241,11 @@ class DirectionVector(object):
             a DirectionVector in the wind-aligned coordinate system
 
         """
-        xw, yw, zw = _rotateAboutZ(self.x, self.y, self.z, beta)
-        return DirectionVector(xw, yw, zw)
+        # xw, yw, zw = _rotateAboutZ(self.x, self.y, self.z, beta)
+        # return DirectionVector(xw, yw, zw)
+
+        xw, yw, zw, dxw, dyw, dzw = self._rotateAboutZ('x', 'y', 'z', beta, 'beta')
+        return DirectionVector(xw, yw, zw, dxw, dyw, dzw)
 
 
     def yawToWind(self, Psi):
@@ -133,8 +262,11 @@ class DirectionVector(object):
             a DirectionVector in the wind-aligned coordinate system
 
         """
-        xw, yw, zw = _rotateAboutZ(self.x, self.y, self.z, -Psi)
-        return DirectionVector(xw, yw, zw)
+        # xw, yw, zw = _rotateAboutZ(self.x, self.y, self.z, -Psi)
+        # return DirectionVector(xw, yw, zw)
+
+        xw, yw, zw, dxw, dyw, dzw = self._rotateAboutZ('x', 'y', 'z', Psi, 'yaw', reverse=True)
+        return DirectionVector(xw, yw, zw, dxw, dyw, dzw)
 
 
     def windToYaw(self, Psi):
@@ -151,11 +283,14 @@ class DirectionVector(object):
             a DirectionVector in the yaw-aligned coordinate system
 
         """
-        xy, yy, zy = _rotateAboutZ(self.x, self.y, self.z, Psi)
-        return DirectionVector(xy, yy, zy)
+        # xy, yy, zy = _rotateAboutZ(self.x, self.y, self.z, Psi)
+        # return DirectionVector(xy, yy, zy)
+
+        xy, yy, zy, dxy, dyy, dzy = self._rotateAboutZ('x', 'y', 'z', Psi, 'yaw')
+        return DirectionVector(xy, yy, zy, dxy, dyy, dzy)
 
 
-    def hubToYaw(self, Theta):
+    def hubToYaw(self, Theta, derivatives=False):
         """Rotates from hub-aligned to yaw-aligned
 
         Parameters
@@ -169,8 +304,12 @@ class DirectionVector(object):
             a DirectionVector in the yaw-aligned coordinate system
 
         """
-        zy, xy, yy = _rotateAboutZ(self.z, self.x, self.y, -Theta)
-        return DirectionVector(xy, yy, zy)
+        # zy, xy, yy = _rotateAboutZ(self.z, self.x, self.y, -Theta)
+        # return DirectionVector(xy, yy, zy, deriv)
+
+        zy, xy, yy, dzy, dxy, dyy = self._rotateAboutZ('z', 'x', 'y', Theta, 'tilt', reverse=True)
+        return DirectionVector(xy, yy, zy, dxy, dyy, dzy)
+
 
 
     def yawToHub(self, Theta):
@@ -187,8 +326,11 @@ class DirectionVector(object):
             a DirectionVector in the hub-aligned coordinate system
 
         """
-        zh, xh, yh = _rotateAboutZ(self.z, self.x, self.y, Theta)
-        return DirectionVector(xh, yh, zh)
+        # zh, xh, yh = _rotateAboutZ(self.z, self.x, self.y, Theta)
+        # return DirectionVector(xh, yh, zh)
+
+        zh, xh, yh, dzh, dxh, dyh = self._rotateAboutZ('z', 'x', 'y', Theta, 'tilt')
+        return DirectionVector(xh, yh, zh, dxh, dyh, dzh)
 
 
     def hubToAzimuth(self, Lambda):
@@ -205,8 +347,11 @@ class DirectionVector(object):
             a DirectionVector in the azimuth-aligned coordinate system
 
         """
-        yz, zz, xz = _rotateAboutZ(self.y, self.z, self.x, Lambda)
-        return DirectionVector(xz, yz, zz)
+        # yz, zz, xz = _rotateAboutZ(self.y, self.z, self.x, Lambda)
+        # return DirectionVector(xz, yz, zz)
+
+        yz, zz, xz, dyz, dzz, dxz = self._rotateAboutZ('y', 'z', 'x', Lambda, 'azimuth')
+        return DirectionVector(xz, yz, zz, dxz, dyz, dzz)
 
 
     def azimuthToHub(self, Lambda):
@@ -223,8 +368,11 @@ class DirectionVector(object):
             a DirectionVector in the hub-aligned coordinate system
 
         """
-        yh, zh, xh = _rotateAboutZ(self.y, self.z, self.x, -Lambda)
-        return DirectionVector(xh, yh, zh)
+        # yh, zh, xh = _rotateAboutZ(self.y, self.z, self.x, -Lambda)
+        # return DirectionVector(xh, yh, zh)
+
+        yh, zh, xh, dyh, dzh, dxh = self._rotateAboutZ('y', 'z', 'x', Lambda, 'azimuth', reverse=True)
+        return DirectionVector(xh, yh, zh, dxh, dyh, dzh)
 
 
 
@@ -244,8 +392,11 @@ class DirectionVector(object):
         """
 
 
-        zb, xb, yb = _rotateAboutZ(self.z, self.x, self.y, -Phi)
-        return DirectionVector(xb, yb, zb)
+        # zb, xb, yb = _rotateAboutZ(self.z, self.x, self.y, -Phi)
+        # return DirectionVector(xb, yb, zb)
+
+        zb, xb, yb, dzb, dxb, dyb = self._rotateAboutZ('z', 'x', 'y', Phi, 'precone', reverse=True)
+        return DirectionVector(xb, yb, zb, dxb, dyb, dzb)
 
 
 
@@ -265,8 +416,11 @@ class DirectionVector(object):
 
         """
 
-        za, xa, ya = _rotateAboutZ(self.z, self.x, self.y, Phi)
-        return DirectionVector(xa, ya, za)
+        # za, xa, ya = _rotateAboutZ(self.z, self.x, self.y, Phi)
+        # return DirectionVector(xa, ya, za)
+
+        za, xa, ya, dza, dxa, dya = self._rotateAboutZ('z', 'x', 'y', Phi, 'precone')
+        return DirectionVector(xa, ya, za, dxa, dya, dza)
 
 
 
@@ -284,8 +438,11 @@ class DirectionVector(object):
             a DirectionVector in the blade-aligned coordinate system
 
         """
-        xb, yb, zb = _rotateAboutZ(self.x, self.y, self.z, theta)
-        return DirectionVector(xb, yb, zb)
+        # xb, yb, zb = _rotateAboutZ(self.x, self.y, self.z, theta)
+        # return DirectionVector(xb, yb, zb)
+
+        xb, yb, zb, dxb, dyb, dzb = self._rotateAboutZ('x', 'y', 'z', theta, 'theta')
+        return DirectionVector(xb, yb, zb, dxb, dyb, dzb)
 
 
     def bladeToAirfoil(self, theta):
@@ -303,8 +460,11 @@ class DirectionVector(object):
 
         """
 
-        xa, ya, za = _rotateAboutZ(self.x, self.y, self.z, -theta)
-        return DirectionVector(xa, ya, za)
+        # xa, ya, za = _rotateAboutZ(self.x, self.y, self.z, -theta)
+        # return DirectionVector(xa, ya, za)
+
+        xa, ya, za, dxa, dya, dza = self._rotateAboutZ('x', 'y', 'z', theta, 'theta', reverse=True)
+        return DirectionVector(xa, ya, za, dxa, dya, dza)
 
 
     def airfoilToProfile(self):
@@ -317,7 +477,9 @@ class DirectionVector(object):
 
         """
 
-        return DirectionVector(self.y, self.x, self.z)
+        # return DirectionVector(self.y, self.x, self.z)
+
+        return DirectionVector(self.y, self.x, self.z, self.dy, self.dx, self.dz)
 
 
     def profileToAirfoil(self):
@@ -330,7 +492,9 @@ class DirectionVector(object):
 
         """
 
-        return DirectionVector(self.y, self.x, self.z)
+        # return DirectionVector(self.y, self.x, self.z)
+
+        return DirectionVector(self.y, self.x, self.z, self.dy, self.dx, self.dz)
 
 
 
@@ -358,6 +522,31 @@ class DirectionVector(object):
             return DirectionVector(v[:, 0], v[:, 1], v[:, 2])
         else:
             return DirectionVector(v[0], v[1], v[2])
+
+
+    def cross_deriv(self, other, namea='a', nameb='b'):
+        """defined only for floats for now"""
+
+        # c = a X b
+        a = self
+        b = other
+
+        dx = {}
+        dx[namea] = np.array([0.0, b.z, -b.y])
+        dx[nameb] = np.array([0.0, -a.z, a.y])
+
+        dy = {}
+        dy[namea] = np.array([-b.z, 0.0, b.x])
+        dy[nameb] = np.array([a.z, 0.0, -a.x])
+
+        dz = {}
+        dz[namea] = np.array([b.y, -b.x, 0.0])
+        dz[nameb] = np.array([-a.y, a.x, 0.0])
+
+        return dx, dy, dz
+
+
+
 
 
     def __neg__(self):
@@ -821,28 +1010,128 @@ class DirectionVector(object):
 
 if __name__ == '__main__':
 
-    x = DirectionVector(4.0, 5.0, 6.0)
 
-    print x
+    T1 = 5.0
+    T2 = 4.0
+    T3 = -3.0
+    tilt = 20.0
 
-    x = DirectionVector([4.0]*2, [5.0]*2, [6.0]*2)
+    F = DirectionVector(T1, T2, T3).hubToYaw(tilt)
 
-    print x
+    Fp1 = DirectionVector(T1+1e-6, T2, T3).hubToYaw(tilt)
+    Fp2 = DirectionVector(T1, T2+1e-6, T3).hubToYaw(tilt)
+    Fp3 = DirectionVector(T1, T2, T3+1e-6).hubToYaw(tilt)
+    Fp4 = DirectionVector(T1, T2, T3).hubToYaw(tilt+1e-6)
 
-    # p = Position(1.0, 2.0, 3.0)
+    dFx = F.dx
+    dFy = F.dy
+    dFz = F.dz
+    # dFx, dFy, dFz = DirectionVector(T1, T2, T3).hubToYaw(tilt, derivatives=True)
+
+    print dFx['dx']
+    print (Fp1.x - F.x)/1e-6
+    print dFx['dy']
+    print (Fp2.x - F.x)/1e-6
+    print dFx['dz']
+    print (Fp3.x - F.x)/1e-6
+    print dFx['dtilt'], 'theta'
+    print (Fp4.x - F.x)/1e-6
+
+
+    print dFy['dx']
+    print (Fp1.y - F.y)/1e-6
+    print dFy['dy']
+    print (Fp2.y - F.y)/1e-6
+    print dFy['dz']
+    print (Fp3.y - F.y)/1e-6
+    print dFy['dtilt'], 'theta'
+    print (Fp4.y - F.y)/1e-6
+
+
+    print dFz['dx']
+    print (Fp1.z - F.z)/1e-6
+    print dFz['dy']
+    print (Fp2.z - F.z)/1e-6
+    print dFz['dz']
+    print (Fp3.z - F.z)/1e-6
+    print dFz['dtilt'], 'theta'
+    print (Fp4.z - F.z)/1e-6
+
+
+    print
+    print
+    print
+    yaw = 3.0
+    F = DirectionVector(T1, T2, T3).hubToYaw(tilt).yawToWind(yaw)
+
+    Fp1 = DirectionVector(T1+1e-6, T2, T3).hubToYaw(tilt).yawToWind(yaw)
+    Fp2 = DirectionVector(T1, T2+1e-6, T3).hubToYaw(tilt).yawToWind(yaw)
+    Fp3 = DirectionVector(T1, T2, T3+1e-6).hubToYaw(tilt).yawToWind(yaw)
+    Fp4 = DirectionVector(T1, T2, T3).hubToYaw(tilt+1e-6).yawToWind(yaw)
+    Fp5 = DirectionVector(T1, T2, T3).hubToYaw(tilt).yawToWind(yaw+1e-6)
+
+    dFx = F.dx
+    dFy = F.dy
+    dFz = F.dz
+
+    print dFx['dx']
+    print (Fp1.x - F.x)/1e-6
+    print dFx['dy']
+    print (Fp2.x - F.x)/1e-6
+    print dFx['dz']
+    print (Fp3.x - F.x)/1e-6
+    print dFx['dtilt'], 'theta'
+    print (Fp4.x - F.x)/1e-6
+    print dFx['dyaw']
+    print (Fp5.x - F.x)/1e-6
+
+    print dFy['dx']
+    print (Fp1.y - F.y)/1e-6
+    print dFy['dy']
+    print (Fp2.y - F.y)/1e-6
+    print dFy['dz']
+    print (Fp3.y - F.y)/1e-6
+    print dFy['dtilt'], 'theta'
+    print (Fp4.y - F.y)/1e-6
+    print dFy['dyaw']
+    print (Fp5.y - F.y)/1e-6
+
+
+    print dFz['dx']
+    print (Fp1.z - F.z)/1e-6
+    print dFz['dy']
+    print (Fp2.z - F.z)/1e-6
+    print dFz['dz']
+    print (Fp3.z - F.z)/1e-6
+    print dFz['dtilt'], 'theta'
+    print (Fp4.z - F.z)/1e-6
+    print dFz['dyaw']
+    print (Fp5.z - F.z)/1e-6
+
+
 
     # x = DirectionVector(4.0, 5.0, 6.0)
 
-    # print p - x
+    # print x
 
-    # y = p - x
+    # x = DirectionVector([4.0]*2, [5.0]*2, [6.0]*2)
 
-    # print p.__class__
-    # print x.__class__
-    # print y.__class__
+    # print x
 
-    # print p.yawToWind(0.0, 10.0).yawToWind(0.0, 10.0)
+    # # p = Position(1.0, 2.0, 3.0)
 
-    # # example()
+    # # x = DirectionVector(4.0, 5.0, 6.0)
+
+    # # print p - x
+
+    # # y = p - x
+
+    # # print p.__class__
+    # # print x.__class__
+    # # print y.__class__
+
+    # # print p.yawToWind(0.0, 10.0).yawToWind(0.0, 10.0)
+
+    # # # example()
 
 
