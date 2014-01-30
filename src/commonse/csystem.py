@@ -547,6 +547,39 @@ class DirectionVector(object):
 
 
 
+    def cross_deriv_array(self, other, namea='a', nameb='b'):
+
+        # c = a X b
+        a = self
+        b = other
+
+        dx = {}
+        dx['d' + namea + 'x'] = np.zeros_like(b.x)
+        dx['d' + namea + 'y'] = b.z
+        dx['d' + namea + 'z'] = -b.y
+        dx['d' + nameb + 'x'] = np.zeros_like(a.x)
+        dx['d' + nameb + 'y'] = -a.z
+        dx['d' + nameb + 'z'] = a.y
+
+        dy = {}
+        dy['d' + namea + 'x'] = -b.z
+        dy['d' + namea + 'y'] = np.zeros_like(b.y)
+        dy['d' + namea + 'z'] = b.x
+        dy['d' + nameb + 'x'] = a.z
+        dy['d' + nameb + 'y'] = np.zeros_like(a.y)
+        dy['d' + nameb + 'z'] = -a.x
+
+        dz = {}
+        dz['d' + namea + 'x'] = b.y
+        dz['d' + namea + 'y'] = -b.x
+        dz['d' + namea + 'z'] = np.zeros_like(b.z)
+        dz['d' + nameb + 'x'] = -a.y
+        dz['d' + nameb + 'y'] = a.x
+        dz['d' + nameb + 'z'] = np.zeros_like(a.z)
+
+        return dx, dy, dz
+
+
 
 
     def __neg__(self):
@@ -1009,6 +1042,25 @@ class DirectionVector(object):
 
 
 if __name__ == '__main__':
+
+    x = np.array([1.0, 2.0])
+    y = np.array([1.3, 4.3])
+    z = np.array([2.3, 2.3])
+    a = DirectionVector(x, y, z)
+
+    x = np.array([3.2, 1.5])
+    y = np.array([2.1, 3.2])
+    z = np.array([5.6, 7.7])
+    b = DirectionVector(x, y, z)
+
+    dx, dy, dz = a.cross_deriv_array(b)
+
+    print dx['dax']
+    print dx['day']
+    print dx['daz']
+    print dx['dby']
+
+    exit()
 
 
     T1 = 5.0
