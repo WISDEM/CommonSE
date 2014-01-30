@@ -193,6 +193,19 @@ def cubic_with_deriv(x, xp, yp):
     return y
 
 
+def trapz_deriv(y, x):
+
+    dI_dy = np.gradient(x)
+    dI_dy[0] /= 2
+    dI_dy[-1] /= 2
+
+    dI_dx = -np.gradient(y)
+    dI_dx[0] = -0.5*(y[0] + y[1])
+    dI_dx[-1] = 0.5*(y[-1] + y[-2])
+
+    return dI_dy, dI_dx
+
+
 def _smooth_maxmin(yd, ymax, maxmin, pct_offset=0.01, dyd=None):
 
     yd, n = _checkIfFloat(yd)
