@@ -37,6 +37,8 @@ class WindBase(Component):
     U = Array(iotype='out', units='m/s', desc='magnitude of wind speed at each z location')
     beta = Array(iotype='out', units='deg', desc='corresponding wind angles relative to inertial coordinate system')
 
+    missing_deriv_policy = 'assume_zero'  # TODO: for now OpenMDAO issue
+
 
 class WaveBase(Component):
     """base component for wave speed/direction"""
@@ -65,6 +67,8 @@ class SoilBase(Component):
     # out
     k = Array(iotype='out', units='N/m', required=True, desc='spring stiffness. rigid directions should use \
         ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
+
+    missing_deriv_policy = 'assume_zero'  # TODO: for now OpenMDAO issue
 
 
 
@@ -230,12 +234,12 @@ class LinearWaves(WaveBase):
     """linear (Airy) wave theory"""
 
     # variables
-    Uc = Float(iotype='in', units='m/s', required=True, desc='mean current speed')
+    Uc = Float(iotype='in', units='m/s', desc='mean current speed')
 
     # parameters
-    z_surface = Float(iotype='in', units='m', required=True, desc='vertical location of water surface')
-    hs = Float(iotype='in', units='m', required=True, desc='significant wave height (crest-to-trough)')
-    T = Float(iotype='in', units='s', required=True, desc='period of waves')
+    z_surface = Float(iotype='in', units='m', desc='vertical location of water surface')
+    hs = Float(iotype='in', units='m', desc='significant wave height (crest-to-trough)')
+    T = Float(iotype='in', units='s', desc='period of waves')
     z_floor = Float(0.0, iotype='in', units='m', desc='vertical location of sea floor')
     g = Float(9.81, iotype='in', units='m/s**2', desc='acceleration of gravity')
     betaWave = Float(0.0, iotype='in', units='deg', desc='wave angle relative to inertial coordinate system')
