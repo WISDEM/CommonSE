@@ -358,6 +358,32 @@ def _setvar(comp, name, value):
     setattr(base, vars[-1], value)
 
 
+def _explodeall(comp, vtype='inputs'):
+
+    if vtype == 'inputs':
+        alloutputs = comp.list_inputs()
+    else:
+        alloutputs = comp.list_outputs()
+
+    maybe_more_vartrees = True
+
+    while maybe_more_vartrees:
+        maybe_more_vartrees = False
+
+        for out in alloutputs:
+            try:
+                vars = getattr(comp, out).list_vars()
+                alloutputs.remove(out)
+                for var in vars:
+                    alloutputs.append(out + '.' + var)
+                maybe_more_vartrees = True
+
+            except Exception:
+                pass
+
+    return alloutputs
+
+
 def _getColumnOfOutputs(comp, outputs, m):
 
     # fill out column of outputs
@@ -383,9 +409,10 @@ def _getColumnOfOutputs(comp, outputs, m):
     return f
 
 
-def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
+def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1e-6, display=False,
+    show_warnings=True, min_grad=1e-6, max_grad=1e6):
 
-    names, errors = check_gradient(comp, fd, step_size, tol, display)
+    names, errors = check_gradient(comp, fd, step_size, tol, display, show_warnings, min_grad, max_grad)
 
     for name, err in zip(names, errors):
         try:
@@ -395,9 +422,29 @@ def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1
             raise e
 
 
-def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
+def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False,
+        show_warnings=True, min_grad=1e-6, max_grad=1e6):
 
     inputs, outputs = comp.list_deriv_vars()
+
+
+
+    if show_warnings:
+        all_inputs = _explodeall(comp, vtype='inputs')
+        all_outputs = _explodeall(comp, vtype='outputs')
+        reserved_inputs = ['missing_deriv_policy', 'directory', 'force_fd', 'force_execute']
+        reserved_outputs = ['derivative_exec_count', 'itername', 'exec_count']
+        potential_missed_inputs = list(set(all_inputs) - set(reserved_inputs) - set(inputs))
+        potential_missed_outputs = list(set(all_outputs) - set(reserved_outputs) - set(outputs))
+
+        if len(potential_missed_inputs) > 0 or len(potential_missed_outputs) > 0:
+            print
+            print '*** Warning: ' + comp.__class__.__name__ + ' does not supply derivatives for the following'
+            print '\tinputs:', potential_missed_inputs
+            print '\toutputs:', potential_missed_outputs
+            print
+
+
     comp.run()
     J = comp.provideJ()
 
@@ -553,6 +600,15 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False):
             if display:
                 output = '{}{:<20} ({}) {}: ({}, {})'.format(star, error, errortype, name, J[i, j], JFD[i, j])
                 print output
+
+            if show_warnings and J[i, j] != 0 and np.abs(J[i, j]) < min_grad:
+                print '*** Warning: The following analytic gradient is very small and may need to be scaled:'
+                print '\t(' + comp.__class__.__name__ + ') ' + name + ':', J[i, j]
+
+            if show_warnings and np.abs(J[i, j]) > max_grad:
+                print '*** Warning: The following analytic gradient is very large and may need to be scaled:'
+                print '\t(' + comp.__class__.__name__ + ') ' + name + ':', J[i, j]
+
 
             # save
             namevec.append(name)
