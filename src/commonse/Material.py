@@ -30,7 +30,7 @@ class Material: #isotropic for the time being
 
         #Predefined materials
         steel={'name':'ASTM992_steel','E':2.1e11,'nu':0.33,'rho':7805., 'fy':345.e6} #SI Units
-        grout={'name':'Grout','E':3.9e10,'nu':0.33,'rho':2500., 'fy':345.e6} #SI Units
+        grout={'name':'Grout','E':3.9e10,'nu':0.33,'rho':2500., 'fy':20.68e6} #SI Units
 
         if ((prms['name'].lower() == 'steel') or (prms['name'].lower() == 'astm992_steel')):
 
