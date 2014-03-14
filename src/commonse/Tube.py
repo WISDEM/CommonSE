@@ -36,6 +36,10 @@ class Tube:
         return (self.D**2-(self.D-2*self.t)**2)* pi/4
 
     @property
+    def Amid(self): #mid-thickness inscribed area of tube (thin wall torsion calculation)
+        return (self.D-self.t)**2* pi/4
+
+    @property
     def Jxx(self): #2nd area moment of inertia w.r.t. x-x axis (Jxx=Jyy for tube)
         return (self.D**4-(self.D-2*self.t)**4)* pi/64
 
