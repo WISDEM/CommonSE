@@ -284,6 +284,13 @@ def smooth_abs(x, dx=0.01):
 
 
 
+def cubic_spline_eval(x1, x2, f1, f2, g1, g2, x):
+
+    spline = CubicSplineSegment(x1, x2, f1, f2, g1, g2)
+    return spline.eval(x)
+
+
+
 class CubicSplineSegment(object):
 
     def __init__(self, x1, x2, f1, f2, g1, g2):
