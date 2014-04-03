@@ -347,6 +347,59 @@ class CubicSplineSegment(object):
 
 
 
+
+def print_vars(comp, list_type='inputs', prefix=''):
+
+    reserved = ['missing_deriv_policy', 'force_execute', 'directory', 'force_fd']
+
+    if list_type == 'inputs':
+        thelist = comp.list_inputs()
+    elif list_type == 'outputs':
+        thelist = comp.list_inputs()
+    elif list_type == 'vars':
+        thelist = comp.list_vars()
+
+    for name in thelist:
+
+        if name in reserved:
+            continue
+
+        trait = comp.get_trait(name)
+        thetype = trait.trait_type.__str__().split()[0].split('.')[-1]
+
+        if thetype == 'VarTree':
+            vartree = getattr(comp, name)
+            if prefix is not None:
+                newprefix = prefix + '.' + name
+            else:
+                newprefix = name
+            print_vars(vartree, 'vars', prefix=newprefix)
+            continue
+
+        units = trait.units
+        desc = trait.desc
+        default = trait.default
+        print trait.category
+
+        if units is None:
+            description = '(' + thetype + ')'
+        else:
+            description = '(' + thetype + ', ' + units + ')'
+
+        if desc is not None:
+            description += ': ' + desc
+
+        name = name + ' = ' + str(default)
+
+        if prefix is not '':
+            name = prefix + '.' + name
+
+        print name + '  # ' + description
+
+
+
+
+
 def _getvar(comp, name):
     vars = name.split('.')
     base = comp
