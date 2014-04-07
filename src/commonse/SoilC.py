@@ -161,16 +161,16 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
 
     #Assemble a 6x6 matrix to be returned, with all terms positive, since we do care about abs values not actual direction of forces
     Klocal=np.zeros([6,6]) #Initialize pile head stiffness matrix, this is at the mudline
-    Klocal[0,0]=Klocal[1,1]=-Kmat[0,0]  #Kx=Ky
+    Klocal[0,0]=Klocal[1,1]=Kmat[0,0]  #Kx=Ky
     Klocal[0,4]=Klocal[4,0]=Kmat[0,1]  #Kx_thetay=Kthetay_x :force along x due to unit rotation about y
-    Klocal[2,2]=-Kz
-    Klocal[1,3]=Klocal[3,1]=-Kmat[0,1]  #Ky_thetax=Kthetax_y :force along y due to unit rotation about x
-    Klocal[3,3]=Klocal[4,4]=-Kmat[1,1]  #Kthetax_thetax=Ktheta_y_thetay
+    Klocal[2,2]=Kz
+    Klocal[1,3]=Klocal[3,1]=Kmat[0,1]  #Ky_thetax=Kthetax_y :force along y due to unit rotation about x
+    Klocal[3,3]=Klocal[4,4]=Kmat[1,1]  #Kthetax_thetax=Ktheta_y_thetay
     Klocal[5,5]=2.*Gp*Jxx_p  #Assume torsional stiffness proportional to the pile torsional stiffness only
 
     Kglobal=Klocal #initialize for vertical piles
 
-    if np.isfinite(batter):
+    if np.isfinite(batter) and batter:
         al_bat3D=np.arctan(np.sqrt(2.)/batter)
         cpsi=np.cos(psi)  #cos psi
         spsi=np.sin(psi)  #sin psi
@@ -189,7 +189,7 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
 
         Kglobal=np.dot(Cl2g,np.dot(Klocal,Cl2g.T))
 
-    return np.abs(Kglobal)
+    return Kglobal
 #______________________________________________________________________________#
 
 if __name__ == '__main__':
