@@ -39,7 +39,7 @@ class SoilC():
     #start by setting default values in a dictionary fashion
         Pprms={'zbots':-np.array([3.,5.,7.,15.,30.,50.]), 'gammas':np.array([10000,10000,10000,10000,10000,10000]),\
         'cus':np.array([60000,60000,60000,60000,60000,60000]), 'phis':np.array([36.,33.,26.,37.,35.,37.5]),\
-        'delta':25.,'sndflg':True, 'bwtable':True, 'PenderSwtch':False}
+        'delta':25.,'sndflg':True, 'bwtable':True, 'PenderSwtch':False,'qu': 200.e3}
         prms=Pprms.copy()
         prms.update(kwargs)
         for key in kwargs:
@@ -80,10 +80,18 @@ def SubgrReact(soilobj,Lp, sndflg=True, bwtable=True):
             #f2[idx2]=tks[-1]  #replicate the value at teh upper bound for those points exceeding it -only for basic interp1d
             #f2[idx3]=tks[0]   #replicate the value at teh lower bound for those points exceeding it -only for basic interp1d
             ks= ( ((f2*deltazs)[0:idx]).sum()+f2[idx-1]*(Lp+soilobj.zbots[idx-1]) )/Lp   #weigthed average of ks [N/m3]
+        else: #For clays there is no direct relationship; Bowles suggests 12,000-48,000 depending on soil capacity
+            warnings.warn('Clay Coefficient of Subgrade Reaction to be given as input, watch what is getting calculated and inputted.')
+            if soilobj.qu<=200.e3 :
+                ks=(soilobj.qu-100.e3)/(200.e3-100.e3)*(24000.e3-12000.e3)+12000.e3   #[N/m3]
+            elif 200.e3<soilobj.qu<=800.e3:
+                ks=(soilobj.qu-200.e3)/(800.e3-200.e3)*(48000.e3-24000.e3)+24000.e3   #[N/m3]
+            elif 800.e3<soilobj.qu:
+                ks=48000.e3
 
         return ks
 
-def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],batter=np.nan,psi=-45.):
+def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],batter=np.nan,psi=-45.*np.pi/180.):
     """This function returns a 6x6 stiffness matrix relative to mudline, assuming a \n
        coefficient of subgrade reation ks [N/m3] linear with depth below mudline.\n
        It uses either Pender's elastic soil medium approximation or the Matlock and Reese (1960)'s  form.\n
@@ -108,24 +116,25 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
 
     if PenderSwtch:
         if H or M:
-            K=EJxx_p/(np.pi*Dp**4/64.*Es)
+            Es_D=ks*Dp
+            K=Ep/Es_D
             La=1.3*Dp*K**(0.222) #active length of pile
             #if Lp>=La:  #long(flexible) pile
-            fxH=3.2*K**(-.333)/(Es*Dp) #CxF
-            fxM=ftH=5.*K**(-.556)/(Es*Dp**2)  #CxM=CthtF
-            ftM=13.6*K**(-0.778)/(Es*Dp**3)   #CthtM
+            fxH=3.2*K**(-.333)/(Es_D*Dp) #CxF
+            fxM=ftH=5.*K**(-.556)/(Es_D*Dp**2)  #CxM=CthtF
+            ftM=13.6*K**(-0.778)/(Es_D*Dp**3)   #CthtM
             L_Mmax=0.41*La #Location of maximum moment from ground level
 
             M=M+loadZ*H #account for eccentricity
             f=M/(Dp*H)  #Eccentricity of the load at the pile head
             a=0.6*f
             b=0.17*f**(-0.3)
-            I_MH=np.min(np.array([8.,a*K**b]))
+            IMH=np.min(np.array([8.,a*K**b]))
             Mmax=IMH*Dp*H
-            if Lp<= 0.07*Dp*np.sqrt(Ep/Es):  #short rigid pile, in which case Es is also considered a constant
-                fxH=0.7*LL**(-.33)/(Es*Dp) #CxF
-                fxM=ftH=0.4*LL**(-0.88)/(Es*Dp**2)  #CxM=CthtF
-                ftM=0.6*LL**(-1.67)/(Es*Dp**3)   #CthtM
+            if Lp<= 0.07*Dp*np.sqrt(Ep/Es_D):  #short rigid pile, in which case Es is also considered a constant
+                fxH=0.7*LL**(-.33)/(Es_D*Dp) #CxF
+                fxM=ftH=0.4*LL**(-0.88)/(Es_D*Dp**2)  #CxM=CthtF
+                ftM=0.6*LL**(-1.67)/(Es_D*Dp**3)   #CthtM
             elif Lp<La:  #intermediate length: use 1.25 the calculated values; correct for fxH, but pushing it for the others
                 fxH *=1.25
                 fxH*=1.25 #CxF
@@ -163,8 +172,8 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
 
     if np.isfinite(batter):
         al_bat3D=np.arctan(np.sqrt(2.)/batter)
-        cpsi=np.cos(psi*np.pi/180.)  #cos psi
-        spsi=np.sin(psi*np.pi/180.)  #sin psi
+        cpsi=np.cos(psi)  #cos psi
+        spsi=np.sin(psi)  #sin psi
         ca3D=np.cos(al_bat3D)  #cos batter 3d angle
         sa3D=np.sin(al_bat3D)  #sin batter 3d angle
 
@@ -178,7 +187,7 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
         Cl2g[2,1]=Cl2g[5,4]=spsi*sa3D
         Cl2g[2,2]=Cl2g[5,5]=ca3D
 
-        Kglobal=Cl2g*Klocal*Cl2g.T
+        Kglobal=np.dot(Cl2g,np.dot(Klocal,Cl2g.T))
 
     return np.abs(Kglobal)
 #______________________________________________________________________________#
