@@ -157,7 +157,9 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
     Kmat=1./den * np.array([[ftM, -fxM] ,[-ftM , fxH]])  #This is all in a coordinate system fixed with the pile, with z along its axis
     #Add the axial stiffness now from Pender, assuming linear variation of Es with depth
     E_SL=ks*Lp  #Moudulus at tip of pile
-    Kz=1.8*E_SL*Dp*LL**0.55*(Ep/E_SL)
+    RR=Ep/E_SL
+    b=LL/RR
+    Kz=1.8*E_SL*Dp*LL**0.55*RR**(-b)
 
     #Assemble a 6x6 matrix to be returned, with all terms positive, since we do care about abs values not actual direction of forces
     Klocal=np.zeros([6,6]) #Initialize pile head stiffness matrix, this is at the mudline
