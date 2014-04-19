@@ -30,6 +30,7 @@ class Material: #isotropic for the time being
 
         #Predefined materials
         steel={'name':'ASTM992_steel','E':2.1e11,'nu':0.33,'rho':7805., 'fy':345.e6} #SI Units
+        heavysteel={'name':'ASTM992_steelheavy','E':2.1e11,'nu':0.33,'rho':8741., 'fy':345.e6} #SI Units
         grout={'name':'Grout','E':3.9e10,'nu':0.33,'rho':2500., 'fy':20.68e6} #SI Units
 
         if ((prms['name'].lower() == 'steel') or (prms['name'].lower() == 'astm992_steel')):
@@ -37,6 +38,12 @@ class Material: #isotropic for the time being
             for key in prms:
                 if not(key in kwargs):  #I need to operate on parameters not set by user
                     setattr(self,key,steel[key])
+
+        elif ((prms['name'].lower() == 'heavysteel') or (prms['name'].lower() == 'astm992_steelheavy') or (prms['name'].lower() == 'heavysteel')):
+
+            for key in prms:
+                if not(key in kwargs):  #I need to operate on parameters not set by user
+                    setattr(self,key,heavysteel[key])
 
         elif ((prms['name'].lower() == 'concrete') or (prms['name'].lower() == 'grout')):
 
