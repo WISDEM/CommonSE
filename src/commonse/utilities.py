@@ -213,6 +213,9 @@ def _smooth_maxmin(yd, ymax, maxmin, pct_offset=0.01, dyd=None):
     y1 = (1-pct_offset)*ymax
     y2 = (1+pct_offset)*ymax
 
+    dy1 = (1-pct_offset)
+    dy2 = (1+pct_offset)
+
     if maxmin == 'min':
         f1 = y1
         f2 = ymax
@@ -220,12 +223,19 @@ def _smooth_maxmin(yd, ymax, maxmin, pct_offset=0.01, dyd=None):
         g2 = 0.0
         idx_constant = yd >= y2
 
+        df1 = dy1
+        df2 = 1.0
+
+
     elif maxmin == 'max':
         f1 = ymax
         f2 = y2
         g1 = 0.0
         g2 = 1.0
         idx_constant = yd <= y1
+
+        df1 = 1.0
+        df2 = dy2
 
     f = CubicSplineSegment(y1, y2, f1, f2, g1, g2)
 
@@ -236,21 +246,26 @@ def _smooth_maxmin(yd, ymax, maxmin, pct_offset=0.01, dyd=None):
     else:
         dya_dyd = np.copy(dyd)
 
+    dya_dymax = np.zeros_like(ya)
+
     # cubic spline region
     idx = np.logical_and(yd > y1, yd < y2)
     ya[idx] = f.eval(yd[idx])
     dya_dyd[idx] = f.eval_deriv(yd[idx])
+    dya_dymax[idx] = f.eval_deriv_params(yd[idx], dy1, dy2, df1, df2, 0.0, 0.0)
 
     # constant region
     ya[idx_constant] = ymax
     dya_dyd[idx_constant] = 0.0
+    dya_dymax[idx_constant] = 1.0
 
     if n == 1:
         ya = ya[0]
         dya_dyd = dya_dyd[0]
+        dya_dymax = dya_dymax[0]
 
 
-    return ya, dya_dyd
+    return ya, dya_dyd, dya_dymax
 
 
 def smooth_max(yd, ymax, pct_offset=0.01, dyd=None):
@@ -379,7 +394,7 @@ def print_vars(comp, list_type='inputs', prefix=''):
         units = trait.units
         desc = trait.desc
         default = trait.default
-        print trait.category
+        # print trait.category
 
         if units is None:
             description = '(' + thetype + ')'
@@ -469,10 +484,36 @@ def _getColumnOfOutputs(comp, outputs, m):
     return f
 
 
-def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1e-6, display=False,
-    show_warnings=True, min_grad=1e-6, max_grad=1e6):
+def check_for_missing_unit_tests(modules):
+    import sys
+    import inspect
 
-    names, errors = check_gradient(comp, fd, step_size, tol, display, show_warnings, min_grad, max_grad)
+    thisfilemembers = inspect.getmembers(sys.modules['__main__'], lambda member: inspect.isclass(member) and member.__module__ == '__main__')
+    tests = [name for name, classname in thisfilemembers]
+
+    totest = []
+    tomod = []
+    reserved = ['Assembly', 'Slot', 'ImplicitComponent']
+    for mod in modules:
+        modulemembers = inspect.getmembers(mod, inspect.isclass)
+        for name, classname in modulemembers:
+            bases = classname.__bases__
+            if 'Base' not in name and name not in reserved and len(bases) > 0:
+                base = bases[0].__name__
+                if base == 'Component' or 'Base' in base:
+                    totest.append(name)
+                    tomod.append(mod.__name__)
+
+    for mod, test in zip(tomod, totest):
+        if 'Test'+test not in tests:
+            print '!!! There does not appear to be a unit test for:', mod + '.' + test
+
+
+def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1e-6, display=False,
+        show_missing_warnings=True, show_scaling_warnings=False, min_grad=1e-6, max_grad=1e6):
+
+    names, errors = check_gradient(comp, fd, step_size, tol, display, show_missing_warnings,
+        show_scaling_warnings, min_grad, max_grad)
 
     for name, err in zip(names, errors):
         try:
@@ -483,16 +524,16 @@ def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1
 
 
 def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False,
-        show_warnings=True, min_grad=1e-6, max_grad=1e6):
+        show_missing_warnings=True, show_scaling_warnings=False, min_grad=1e-6, max_grad=1e6):
 
     inputs, outputs = comp.list_deriv_vars()
 
 
 
-    if show_warnings:
+    if show_missing_warnings:
         all_inputs = _explodeall(comp, vtype='inputs')
         all_outputs = _explodeall(comp, vtype='outputs')
-        reserved_inputs = ['missing_deriv_policy', 'directory', 'force_fd', 'force_execute']
+        reserved_inputs = ['missing_deriv_policy', 'directory', 'force_fd', 'force_execute', 'eval_only']
         reserved_outputs = ['derivative_exec_count', 'itername', 'exec_count']
         potential_missed_inputs = list(set(all_inputs) - set(reserved_inputs) - set(inputs))
         potential_missed_outputs = list(set(all_outputs) - set(reserved_outputs) - set(outputs))
@@ -661,11 +702,11 @@ def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False,
                 output = '{}{:<20} ({}) {}: ({}, {})'.format(star, error, errortype, name, J[i, j], JFD[i, j])
                 print output
 
-            if show_warnings and J[i, j] != 0 and np.abs(J[i, j]) < min_grad:
+            if show_scaling_warnings and J[i, j] != 0 and np.abs(J[i, j]) < min_grad:
                 print '*** Warning: The following analytic gradient is very small and may need to be scaled:'
                 print '\t(' + comp.__class__.__name__ + ') ' + name + ':', J[i, j]
 
-            if show_warnings and np.abs(J[i, j]) > max_grad:
+            if show_scaling_warnings and np.abs(J[i, j]) > max_grad:
                 print '*** Warning: The following analytic gradient is very large and may need to be scaled:'
                 print '\t(' + comp.__class__.__name__ + ') ' + name + ':', J[i, j]
 
