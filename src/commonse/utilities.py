@@ -487,6 +487,7 @@ def _getColumnOfOutputs(comp, outputs, m):
 def check_for_missing_unit_tests(modules):
     import sys
     import inspect
+    import ast
 
     thisfilemembers = inspect.getmembers(sys.modules['__main__'], lambda member: inspect.isclass(member) and member.__module__ == '__main__')
     tests = [name for name, classname in thisfilemembers]
@@ -496,9 +497,16 @@ def check_for_missing_unit_tests(modules):
     reserved = ['Assembly', 'Slot', 'ImplicitComponent']
     for mod in modules:
         modulemembers = inspect.getmembers(mod, inspect.isclass)
+        fname = mod.__file__
+        if fname[-1] == 'c':
+            fname = fname[:-1]
+        f = open(fname, 'r')
+        p = ast.parse(f.read())
+        f.close()
+        nonimported = [node.name for node in ast.walk(p) if isinstance(node, ast.ClassDef)]
         for name, classname in modulemembers:
             bases = classname.__bases__
-            if 'Base' not in name and name not in reserved and len(bases) > 0:
+            if 'Base' not in name and name not in reserved and name in nonimported and len(bases) > 0:
                 base = bases[0].__name__
                 if base == 'Component' or 'Base' in base:
                     totest.append(name)
