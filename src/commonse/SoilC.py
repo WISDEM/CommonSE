@@ -70,7 +70,10 @@ def SubgrReact(soilobj,Lp, sndflg=True, bwtable=True):
 
         tks=APIks[int(-bwtable)+1,:]
         deltazs=np.hstack((-soilobj.zbots[0],soilobj.zbots-np.roll(soilobj.zbots,-1)))[:-1]
-        idx=np.nonzero( soilobj.zbots < (-Lp) )[0][0]#first index of zbots exceeding the z of the pile tip
+        if min(soilobj.zbots) <= (-Lp):
+            idx=np.nonzero( soilobj.zbots <= (-Lp) )[0][0]#first index of zbots exceeding the z of the pile tip
+        else:
+            idx=0  #In this case we are assuming the soil is constant below the deepeset level known
         if sndflg:
             #f=interpolate.interp1d(APIphis,tks,kind='quadratic',bounds_error=False)  #function containing the interpolation function
             f=interpolate.UnivariateSpline(APIphis,tks,k=2)  #funct
