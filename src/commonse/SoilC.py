@@ -39,7 +39,7 @@ class SoilC():
     #start by setting default values in a dictionary fashion
         Pprms={'zbots':-np.array([3.,5.,7.,15.,30.,50.]), 'gammas':np.array([10000,10000,10000,10000,10000,10000]),\
         'cus':np.array([60000,60000,60000,60000,60000,60000]), 'phis':np.array([36.,33.,26.,37.,35.,37.5]),\
-        'delta':25.,'sndflg':True, 'bwtable':True, 'PenderSwtch':False,'qu': 200.e3}
+        'delta':25.,'sndflg':True, 'bwtable':True, 'PenderSwtch':False, 'SoilSF':1.25, 'qu': 200.e3}
         prms=Pprms.copy()
         prms.update(kwargs)
         for key in kwargs:
@@ -73,7 +73,7 @@ def SubgrReact(soilobj,Lp, sndflg=True, bwtable=True):
         if min(soilobj.zbots) <= (-Lp):
             idx=np.nonzero( soilobj.zbots <= (-Lp) )[0][0]#first index of zbots exceeding the z of the pile tip
         else:
-            idx=0  #In this case we are assuming the soil is constant below the deepeset level known
+            idx=len(deltazs)  #In this case we are assuming the soil is constant below the deepeset level known
         if sndflg:
             #f=interpolate.interp1d(APIphis,tks,kind='quadratic',bounds_error=False)  #function containing the interpolation function
             f=interpolate.UnivariateSpline(APIphis,tks,k=2)  #funct
@@ -92,7 +92,7 @@ def SubgrReact(soilobj,Lp, sndflg=True, bwtable=True):
             elif 800.e3<soilobj.qu:
                 ks=48000.e3
 
-        return ks
+        return ks/soilobj.SoilSF
 
 def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],batter=np.nan,psi=-45.*np.pi/180.):
     """This function returns a 6x6 stiffness matrix relative to mudline, assuming a \n
