@@ -10,7 +10,7 @@ Differentiable versions of several functions are provided (along with their deri
 .. currentmodule:: commonse.utilities
 
 .. autosummary::
-    :toctree:
+    :toctree: generated
 
     linspace_with_deriv
     interp_with_deriv
@@ -25,7 +25,7 @@ Testing Gradients
 =================
 
 .. autosummary::
-    :toctree:
+    :toctree: generated
 
     check_gradient_unit_test
     check_gradient

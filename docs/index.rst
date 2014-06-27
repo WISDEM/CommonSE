@@ -14,7 +14,6 @@ CommonSE
     :numbered:
     :maxdepth: 2
 
-    intro
     installation
     csystem
     environment

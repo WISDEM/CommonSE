@@ -3,6 +3,8 @@ Environment
 
 Environment contains shared wind, wave, and soil models.
 
+.. currentmodule:: commonse.environment
+
 Wind
 ====
 
@@ -25,11 +27,24 @@ The logarithmic profile is of the form
     U = U_{ref} \left[\frac{\log\left(\frac{z - z_0}{z_{roughness}}\right) }{\log\left(\frac{z_{ref} - z_0}{z_{roughness}}\right)}\right]
 
 
+.. class:: WindBase
+.. class:: PowerWind
+.. class:: LogWind
+
 
 Wave
 ====
 
-Hydrodynamic speed distributions are estimated using linear wave theory. According to linear wave theory, the maximum horizontal velocity of a wave is given as
+All wind models currently inherit from :class:`WaveBase`:
+
+.. literalinclude:: ../src/commonse/environment.py
+    :language: python
+    :start-after: WaveBase(Component)
+    :end-before: missing_deriv
+    :prepend: class WaveBase(Component):
+
+
+Hydrodynamic speed distributions are estimated using linear wave theory (:class:`LinearWaves`). According to linear wave theory, the maximum horizontal velocity of a wave is given as
 
 .. math:: U_{current}  = \omega \frac{h}{2} \frac{\cosh(k(z+D))}{\sinh(kD)} \cos(\omega t)
 
@@ -46,14 +61,30 @@ and the corresponding maximum acceleration is
 
 .. Drag coefficient is estimated in the same manner as described for the wind loads.
 
+.. class:: WaveBase
+.. class:: LinearWaves
+
 Soil
 ====
 
-The soil is assumed to not contribute any inertial or applied forces, but to only affect the stiffness of the foundation.  The user may specify directions which are considered rigid.  For the other directions, effective spring constants are estimated based on the soil properties.  A simple textbook model is used in this implementation [1]_.   The model allows for computation of an effective spring constant for all six degrees of freedom, each computed as a function of the shear modulus and Poisson's ratio of the soil.  For example:
+All wind models currently inherit from :class:`SoilBase`:
+
+.. literalinclude:: ../src/commonse/environment.py
+    :language: python
+    :start-after: SoilBase(Component)
+    :end-before: missing_deriv
+    :prepend: class SoilBase(Component):
+
+
+The soil is assumed to not contribute any inertial or applied forces, but to only affect the stiffness of the foundation.  The user may specify directions which are considered rigid.  For the other directions, effective spring constants are estimated based on the soil properties (:class:`TowerSoil`).  A simple textbook model is used in this implementation [1]_.   The model allows for computation of an effective spring constant for all six degrees of freedom, each computed as a function of the shear modulus and Poisson's ratio of the soil.  For example:
 
 .. math:: k_z = \frac{4 G r}{1- \nu} \left( 1 + 0.6(1-\nu)\frac{h}{r}  \right)
 
 where h is the depth of the foundation below the soil.
+
+
+.. class:: SoilBase
+.. class:: TowerSoil
 
 
 :bib:`Bibliography`
