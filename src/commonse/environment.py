@@ -50,6 +50,9 @@ class WaveBase(Component):
     U = Array(iotype='out', units='m/s', desc='magnitude of wave speed at each z location')
     A = Array(iotype='out', units='m/s**2', desc='magnitude of wave acceleration at each z location')
     beta = Array(iotype='out', units='deg', desc='corresponding wave angles relative to inertial coordinate system')
+    U0 = Float(iotype='out', units='m/s', desc='magnitude of wave speed at z=MSL')
+    A0 = Float(iotype='out', units='m/s**2', desc='magnitude of wave acceleration at z=MSL')
+    beta0 = Float(iotype='out', units='deg', desc='corresponding wave angles relative to inertial coordinate system at z=MSL')
 
     missing_deriv_policy = 'assume_zero'
 
@@ -59,6 +62,10 @@ class WaveBase(Component):
         self.U = np.zeros(n)
         self.A = np.zeros(n)
         self.beta = np.zeros(n)
+        self.U0 = 0.
+        self.A0 = 0.
+        self.beta0 = 0.
+
 
 
 class SoilBase(Component):
@@ -69,8 +76,6 @@ class SoilBase(Component):
         ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
 
     missing_deriv_policy = 'assume_zero'  # TODO: for now OpenMDAO issue
-
-
 
 
 # -----------------------
@@ -264,15 +269,17 @@ class LinearWaves(WaveBase):
 
         # maximum velocity
         self.U = h/2.0*omega*np.cosh(k*(z_rel + d))/math.sinh(k*d) + self.Uc
+        self.U0 = h/2.0*omega*np.cosh(k*(0. + d))/math.sinh(k*d) + self.Uc
 
         # check heights
-        self.U[np.logical_or(self.z < self.z_floor, self.z > self.z_surface)] = 0
+        self.U[np.logical_or(self.z < self.z_floor, self.z > self.z_surface)] = 0.
 
         # acceleration
-        self.A = self.U * omega
-
+        self.A  = self.U * omega
+        self.A0 = self.U0 * omega
         # angles
         self.beta = self.betaWave*np.ones_like(self.z)
+        self.beta0 =self.betaWave
 
         # derivatives
         dU_dz = h/2.0*omega*np.sinh(k*(z_rel + d))/math.sinh(k*d)*k
@@ -289,7 +296,7 @@ class LinearWaves(WaveBase):
     def list_deriv_vars(self):
 
         inputs = ('z', 'Uc')
-        outputs = ('U', 'A')
+        outputs = ('U', 'A', 'U0', 'A0')
 
         return inputs, outputs
 
