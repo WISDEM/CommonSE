@@ -363,7 +363,7 @@ class CubicSplineSegment(object):
 
 
 
-def print_vars(comp, list_type='inputs', prefix=''):
+def print_vars(comp, list_type='inputs', prefix='', astable=False):
 
     reserved = ['missing_deriv_policy', 'force_execute', 'directory', 'force_fd']
 
@@ -404,12 +404,26 @@ def print_vars(comp, list_type='inputs', prefix=''):
         if desc is not None:
             description += ': ' + desc
 
-        name = name + ' = ' + str(default)
 
         if prefix is not '':
             name = prefix + '.' + name
 
-        print name + '  # ' + description
+        if not astable:
+            name = name + ' = ' + str(default)
+            print name + '  # ' + description
+
+        else:
+
+            if not units:
+                units = ''
+            if not desc:
+                desc = ''
+            strdefault = str(default)
+            if strdefault == '<undefined>':
+                strdefault = ''
+
+            print '{0:15}\t{1:10}\t{2:15}\t{3:10}\t{4}'.format(name, thetype, strdefault, units, desc)
+
 
 
 
