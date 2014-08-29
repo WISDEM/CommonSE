@@ -1,6 +1,4 @@
-# CommonSE
-
-A collection of utilities for common use across the WISDEM set of tools.
+CommonSE is a collection of utilities for common use across the WISDEM set of tools.
 
 Author: [S. Andrew Ning](mailto:andrew.ning@nrel.gov)
 
