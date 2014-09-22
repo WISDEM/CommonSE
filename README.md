@@ -2,6 +2,10 @@ CommonSE is a collection of utilities for common use across the WISDEM set of to
 
 Author: [S. Andrew Ning](mailto:andrew.ning@nrel.gov)
 
+## Detailed Documentation
+
+For detailed documentation see <http://wisdem.github.io/CommonSE/>
+
 ## Prerequisites
 
 Fortran compiler, NumPy, SciPy
@@ -23,8 +27,6 @@ or run the unit tests
 
     $ python src/commonse/test/test_environment_gradients.py
 
-## Detailed Documentation
 
-Access the online version at <http://wisdem.github.io/CommonSE/>
 
 
