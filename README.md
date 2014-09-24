@@ -28,5 +28,5 @@ or run the unit tests
     $ python src/commonse/test/test_environment_gradients.py
 
 
-
+For software issues please use <https://github.com/WISDEM/CommonSE/issues>.  For functionality and theory related questions and comments please use the NWTC forum for [Systems Engineering Software Questions](https://wind.nrel.gov/forum/wind/viewtopic.php?f=34&t=1002).
 
