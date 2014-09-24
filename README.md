@@ -2,6 +2,10 @@ CommonSE is a collection of utilities for common use across the WISDEM set of to
 
 Author: [S. Andrew Ning](mailto:andrew.ning@nrel.gov)
 
+## Version
+
+This software is a beta version 0.1.0.
+
 ## Detailed Documentation
 
 For detailed documentation see <http://wisdem.github.io/CommonSE/>
