@@ -67,6 +67,7 @@ def _checkIfFloat(x):
 
 
 def linspace_with_deriv(start, stop, num):
+    """creates linearly spaced arrays, and derivatives for changing end points"""
 
     step = (stop-start)/float((num-1))
     y = np.arange(0, num) * step + start
@@ -84,6 +85,8 @@ def linspace_with_deriv(start, stop, num):
 
 
 def interp_with_deriv(x, xp, yp):
+    """linear interpolation and its derivative. To be precise, linear interpolation is not
+    differentiable right at the control points, but in general it works well enough"""
     # TODO: put in Fortran to speed up
 
     x, n = _checkIfFloat(x)
@@ -127,6 +130,7 @@ def interp_with_deriv(x, xp, yp):
 
 
 def cubic_with_deriv(x, xp, yp):
+    """deprecated"""
 
     x, n = _checkIfFloat(x)
 
@@ -194,6 +198,7 @@ def cubic_with_deriv(x, xp, yp):
 
 
 def trapz_deriv(y, x):
+    """trapezoidal integration and derivatives with respect to integrand or variable."""
 
     dI_dy = np.gradient(x)
     dI_dy[0] /= 2
@@ -269,15 +274,21 @@ def _smooth_maxmin(yd, ymax, maxmin, pct_offset=0.01, dyd=None):
 
 
 def smooth_max(yd, ymax, pct_offset=0.01, dyd=None):
+    """array max, uses cubic spline to smoothly transition.  derivatives with respect to array and max value.
+    width of transition can be controlled, and chain rules for differentiation"""
     return _smooth_maxmin(yd, ymax, 'max', pct_offset, dyd)
 
 
 def smooth_min(yd, ymin, pct_offset=0.01, dyd=None):
+    """array min, uses cubic spline to smoothly transition.  derivatives with respect to array and min value.
+    width of transition can be controlled, and chain rules for differentiation"""
     return _smooth_maxmin(yd, ymin, 'min', pct_offset, dyd)
 
 
 
 def smooth_abs(x, dx=0.01):
+    """smoothed version of absolute vaue function, with quadratic instead of sharp bottom.
+    Derivative w.r.t. variable of interest.  Width of quadratic can be controlled"""
 
     x, n = _checkIfFloat(x)
 
@@ -307,6 +318,7 @@ def cubic_spline_eval(x1, x2, f1, f2, g1, g2, x):
 
 
 class CubicSplineSegment(object):
+    """cubic splines and the their derivatives with with respect to the variables and the parameters"""
 
     def __init__(self, x1, x2, f1, f2, g1, g2):
 
@@ -499,6 +511,14 @@ def _getColumnOfOutputs(comp, outputs, m):
 
 
 def check_for_missing_unit_tests(modules):
+    """A heuristic check to find components that don't have a corresonding unit test
+    for its gradients.
+
+    Parameters
+    ----------
+    modules : list(str)
+        a list of modules to check for missin ggradients
+    """
     import sys
     import inspect
     import ast
@@ -533,6 +553,31 @@ def check_for_missing_unit_tests(modules):
 
 def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1e-6, display=False,
         show_missing_warnings=True, show_scaling_warnings=False, min_grad=1e-6, max_grad=1e6):
+    """compare provided analytic gradients to finite-difference gradients with unit testing.
+    Same as check_gradient, but provides a unit test for each gradient for convenience.
+    the unit tests checks that the error for each gradient is less than tol.
+
+    Parameters
+    ----------
+    comp : obj
+        An OpenMDAO component that provides analytic gradients through provideJ()
+    fd : str
+        the type of finite difference to use.  options are central or forward
+    step_size : float
+        step size to use in finite differencing
+    tol : float
+        tolerance for how close the gradients should agree to
+    display : boolean
+        if True, display results for each gradient
+    show_missing_warnings: boolean
+        if True, warn for gradients that were not provided
+        (they may be ones that are unecessary, but may be ones that were accidentally skipped)
+    show_scaling_warnings: boolean
+        if True, warn for gradients that are either very small or very large which may lead
+        to challenges in solving the full linear system
+    min_grad/max_grad : float
+        quantifies what "very small" or "very large" means when using show_scaling_warnings
+    """
 
     names, errors = check_gradient(comp, fd, step_size, tol, display, show_missing_warnings,
         show_scaling_warnings, min_grad, max_grad)
@@ -547,6 +592,38 @@ def check_gradient_unit_test(unittest, comp, fd='central', step_size=1e-6, tol=1
 
 def check_gradient(comp, fd='central', step_size=1e-6, tol=1e-6, display=False,
         show_missing_warnings=True, show_scaling_warnings=False, min_grad=1e-6, max_grad=1e6):
+    """compare provided analytic gradients to finite-difference gradients
+
+    Parameters
+    ----------
+    comp : obj
+        An OpenMDAO component that provides analytic gradients through provideJ()
+    fd : str
+        the type of finite difference to use.  options are central or forward
+    step_size : float
+        step size to use in finite differencing
+    tol : float
+        tolerance for how close the gradients should agree to
+    display : boolean
+        if True, display results for each gradient
+    show_missing_warnings: boolean
+        if True, warn for gradients that were not provided
+        (they may be ones that are unecessary, but may be ones that were accidentally skipped)
+    show_scaling_warnings: boolean
+        if True, warn for gradients that are either very small or very large which may lead
+        to challenges in solving the full linear system
+    min_grad/max_grad : float
+        quantifies what "very small" or "very large" means when using show_scaling_warnings
+
+    Returns
+    -------
+    names : array(str)
+        list of the names of all the gradients
+    errorvec : array(float)
+        list of all the errors for the gradients.  If the magnitude of the gradient is less than
+        tol, then an absolute error is used, otherwise a relative error is used.
+
+    """
 
     inputs, outputs = comp.list_deriv_vars()
 
