@@ -1,6 +1,6 @@
 CommonSE is a collection of utilities for common use across the WISDEM set of tools.
 
-Author: [S. Andrew Ning](mailto:andrew.ning@nrel.gov)
+Author: [S. Andrew Ning, R. Damiani, and K. Dykes](mailto:nrel.wisdem+commonse@gmail.com)
 
 ## Version
 
@@ -12,17 +12,26 @@ For detailed documentation see <http://wisdem.github.io/CommonSE/>
 
 ## Prerequisites
 
-Fortran compiler, NumPy, SciPy
+General: NumPy, SciPy, Swig, pyWin32, MatlPlotLib, Lxml, OpenMDAO
+
+## Dependencies
+
+Wind Plant Framework: [FUSED-Wind](http://fusedwind.org) (Framework for Unified Systems Engineering and Design of Wind Plants)
+
+Supporting python packages: Pandas, Algopy, Zope.interface, Sphinx, Xlrd, PyOpt, py2exe, Pyzmq, Sphinxcontrib-bibtex, Sphinxcontrib-zopeext, Numpydoc, Ipython
 
 ## Installation
 
-Install CommonSE with the following command.
+First, clone the [repository](https://github.com/WISDEM/CommonSE)
+or download the releases and uncompress/unpack (CommonSE.py-|release|.tar.gz or CommonSE.py-|release|.zip) from the website link at the bottom the [CommonSE site](http://nwtc.nrel.gov/CommonSE).
 
-    $ python setup.py install
+Install CommonSE with the following command from within an activated OpenMDAO environment.
+
+    $ plugin install
 
 ## Run Unit Tests
 
-To check if installation was successful you can try to import the module
+To check if installation was successful you can try to import the module from within an activated OpenMDAO environment.
 
     $ python
     > import commonse.environment 
