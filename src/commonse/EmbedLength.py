@@ -25,7 +25,7 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
         tpile       -float, pile thickness [m]                  \n
         Nhead       -float, axial force [N] at the head of the pile, mudline, ABS value, you may use also the max tensile overall if more conservative, it will be thought as pushing down   \n
         soil        -object of class SoilC
-        gravity     -optional, m/s^2 vertical acceleration of gravity
+        gravity     -optional, m/s^2 vertical acceleration of gravity (absolute value)
         """
 
         #From API here is a lookup table
