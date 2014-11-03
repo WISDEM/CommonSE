@@ -23,7 +23,7 @@ codeName = u'CommonSE'
 authorName = u'S. Andrew Ning'
 copyright = u'2014, NREL'
 version = '0.1'
-release = '0.1.0'
+release = '0.1.1'
 
 # -- General configuration -----------------------------------------------------
 
