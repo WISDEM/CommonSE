@@ -6,7 +6,7 @@
 #
 # Created:     04/11/2013
 # Copyright:   (c) rdamiani 2013
-# Licence:     <your licence>
+# Licence:     APache (2014)
 #-------------------------------------------------------------------------------
 
 def main():
