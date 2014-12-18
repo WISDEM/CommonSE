@@ -1,10 +1,10 @@
-import math
 import numpy as np
-from openmdao.main.api import VariableTree, Component, Assembly, set_as_top
-from openmdao.main.datatypes.api import Int, Float, Array, VarTree, Slot,Instance, Bool
+from openmdao.main.api import Component
+from openmdao.main.datatypes.api import Float, Array, Bool
 
 from commonse.utilities import hstack, vstack
 from commonse.csystem import DirectionVector
+
 
 class RNAMass(Component):
 
@@ -119,18 +119,18 @@ class RNAMass(Component):
 class RotorLoads(Component):
 
     # variables
-    F = Array(np.array([0.0,0.0,0.0]),iotype='in', desc='forces in hub-aligned coordinate system')
-    M = Array(np.array([0.0,0.0,0.0]),iotype='in', desc='moments in hub-aligned coordinate system')
+    F = Array(np.array([0.0, 0.0, 0.0]), iotype='in', desc='forces in hub-aligned coordinate system')
+    M = Array(np.array([0.0, 0.0, 0.0]), iotype='in', desc='moments in hub-aligned coordinate system')
     r_hub = Array(iotype='in', desc='position of rotor hub relative to tower top in yaw-aligned c.s.')
     m_RNA = Float(iotype='in', units='kg', desc='mass of rotor nacelle assembly')
     rna_cm = Array(iotype='in', units='m', desc='location of RNA center of mass relative to tower top in yaw-aligned c.s.')
 
-    rna_weightM = Bool(True,iotype='in', units=None, desc='Flag to indicate whether or not the RNA weight should be considered.\
+    rna_weightM = Bool(True, iotype='in', units=None, desc='Flag to indicate whether or not the RNA weight should be considered.\
                       An upwind overhang may lead to unconservative estimates due to the P-Delta effect(suggest not using). For downwind turbines set to True. ')
 
-    # These are used for backwards compatibility - do not use
-    T = Float(iotype='in', desc='thrust in hub-aligned coordinate system') #THIS MEANS STILL YAWED THOUGH (Shaft tilt)
-    Q = Float(iotype='in', desc='torque in hub-aligned coordinate system')
+    # # These are used for backwards compatibility - do not use
+    # T = Float(iotype='in', desc='thrust in hub-aligned coordinate system')  # THIS MEANS STILL YAWED THOUGH (Shaft tilt)
+    # Q = Float(iotype='in', desc='torque in hub-aligned coordinate system')
 
     # parameters
     downwind = Bool(False, iotype='in')
@@ -146,12 +146,8 @@ class RotorLoads(Component):
 
     def execute(self):
 
-        if self.T != 0:
-            F = [self.T, 0.0, 0.0]
-            M = [self.Q, 0.0, 0.0]
-        else:
-            F = self.F
-            M = self.M
+        F = self.F
+        M = self.M
 
         F = DirectionVector.fromArray(F).hubToYaw(self.tilt)
         M = DirectionVector.fromArray(M).hubToYaw(self.tilt)
@@ -177,17 +173,18 @@ class RotorLoads(Component):
         M_w = rna_cm.cross(F_w)
         self.saveF_w = F_w
 
-        F += F_w
+        Fout = F + F_w
 
         if self.rna_weightM:
-           M += M_w
+            Mout = M + M_w
         else:
- 			#REMOVE WEIGHT EFFECT TO ACCOUNT FOR P-Delta Effect
-			print "!!!! No weight effect on rotor moments -TowerSE  !!!!"
+            Mout = M
+            #REMOVE WEIGHT EFFECT TO ACCOUNT FOR P-Delta Effect
+            print "!!!! No weight effect on rotor moments -TowerSE  !!!!"
 
-		# put back in array
-        self.top_F = np.array([F.x, F.y, F.z])
-        self.top_M = np.array([M.x, M.y, M.z])
+        # put back in array
+        self.top_F = np.array([Fout.x, Fout.y, Fout.z])
+        self.top_M = np.array([Mout.x, Mout.y, Mout.z])
 
 
     def list_deriv_vars(self):
@@ -229,8 +226,12 @@ class RotorLoads(Component):
 
         dMx_w_cross, dMy_w_cross, dMz_w_cross = self.save_rcm.cross_deriv(self.saveF_w, 'dr', 'dF')
 
-        dtopM_drnacm = np.array([dMx_w_cross['dr'], dMy_w_cross['dr'], dMz_w_cross['dr']])
-        dtopM_dF_w = np.array([dMx_w_cross['dF'], dMy_w_cross['dF'], dMz_w_cross['dF']])
+        if self.rna_weightM:
+            dtopM_drnacm = np.array([dMx_w_cross['dr'], dMy_w_cross['dr'], dMz_w_cross['dr']])
+            dtopM_dF_w = np.array([dMx_w_cross['dF'], dMy_w_cross['dF'], dMz_w_cross['dF']])
+        else:
+            dtopM_drnacm = np.zeros((3, 3))
+            dtopM_dF_w = np.zeros((3, 3))
         dtopM_dm = np.dot(dtopM_dF_w, dtopF_w_dm)
 
         if self.downwind:
