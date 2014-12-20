@@ -256,7 +256,7 @@ class LinearWaves(WaveBase):
         d = self.z_surface - self.z_floor
 
         # design wave height
-        h = 1.1*self.hs
+        h = self.hs
 
         # circular frequency
         omega = 2.0*math.pi/self.T
