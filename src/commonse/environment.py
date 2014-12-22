@@ -249,6 +249,7 @@ class LinearWaves(WaveBase):
     g = Float(9.81, iotype='in', units='m/s**2', desc='acceleration of gravity')
     betaWave = Float(0.0, iotype='in', units='deg', desc='wave angle relative to inertial coordinate system')
 
+    missing_deriv_policy = 'assume_zero'
 
     def execute(self):
 
@@ -290,7 +291,11 @@ class LinearWaves(WaveBase):
         dA_dz = omega*dU_dz
         dA_dUc = omega*dU_dUc
 
-        self.J = vstack([hstack([np.diag(dU_dz), dU_dUc]), hstack([np.diag(dA_dz), dA_dUc])])
+        dU0 = np.zeros(len(self.z) + 1)
+        dU0[-1] = 1.0
+        dA0 = omega * dU0
+
+        self.J = vstack([hstack([np.diag(dU_dz), dU_dUc]), hstack([np.diag(dA_dz), dA_dUc]), np.transpose(dU0), np.transpose(dA0)])
 
 
     def list_deriv_vars(self):
