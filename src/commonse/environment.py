@@ -305,6 +305,22 @@ class LinearWaves(WaveBase):
 
         return self.J
 
+class TowerSoilK(SoilBase):
+    """Passthrough of Soil-Structure-INteraction equivalent spring constants used to bypass TowerSoil."""
+
+    # variable
+    kin = Array( iotype='in',  desc='spring stiffness. rigid directions should use \
+        ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
+
+    rigid = Array(iotype='in', dtype=np.bool, desc='directions that should be considered infinitely rigid\
+        order is x, theta_x, y, theta_y, z, theta_z')
+
+    missing_deriv_policy = 'assume_zero'
+
+
+    def execute(self):
+        self.k=self.kin
+        self.k[self.rigid] = float('inf')
 
 class TowerSoil(SoilBase):
     """textbook soil stiffness method"""
