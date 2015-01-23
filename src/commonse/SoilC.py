@@ -39,7 +39,7 @@ class SoilC():
     #start by setting default values in a dictionary fashion
         Pprms={'zbots':-np.array([3.,5.,7.,15.,30.,50.]), 'gammas':np.array([10000,10000,10000,10000,10000,10000]),\
         'cus':np.array([60000,60000,60000,60000,60000,60000]), 'phis':np.array([36.,33.,26.,37.,35.,37.5]),\
-        'delta':25.,'sndflg':True, 'bwtable':True, 'PenderSwtch':False, 'SoilSF':1.25, 'qu': 200.e3}
+        'delta':25.,'sndflg':True, 'plug':False, 'bwtable':True, 'PenderSwtch':False, 'SoilSF':1.25, 'qu': 200.e3}
         prms=Pprms.copy()
         prms.update(kwargs)
         for key in kwargs:

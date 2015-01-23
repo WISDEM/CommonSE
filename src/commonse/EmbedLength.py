@@ -69,16 +69,20 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
 
         return p00
 
-      def fsoil(z,delta_soil,K_API=0.8,SF_pile_ex=1.5,sndflg=True):
+      def fsoil(z,delta_soil,SF_pile_ex=1.5,sndflg=True):
         """INPUT \n
         z         -float(n),  negative z as in below seabed depth at various n levels [m]
         deltasoil   -float, friction angle between pile and soil [deg] \n
-        K_API   -float, Coefficient of lateral earth pressure (0.8 for unplugged, 1 for plugged piles)
+
         sndflg  -boolean, True if sand; False if clay
         SF_pile_ex  -float, pile capacity safety factor API RP2A \n
         """
         z=np.asarray(z).reshape([1,-1])
         if sndflg:
+            #K_API   -float, Coefficient of lateral earth pressure (0.8 for unplugged, 1 for plugged piles)
+            K_API=0.8 #plug=False
+            if soil.plug: #plugged
+                K_API=1.
             frsoil=K_API*np.tan(delta_soil*np.pi/180.)*p0(z,soil.zbots,soil.gammas)
         else:
 
@@ -112,9 +116,10 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
                 fsoil    -float(n), friction coefficient at n z levels
                 Dpile    -float or (n), Dmp
                 tpile    -float or (n), tmp
+                plug     -Boolean, whether or not to consider the pile plugged
         """
         frict=fsoil(z,soil.delta,sndflg=soil.sndflg)
-        return frict*np.pi*(Dpile+(Dpile-2.*tpile))
+        return frict*np.pi*(Dpile+int(not(soil.plug))*(Dpile-2.*tpile))
 
       def bearCap(z,Atip,SF_pile_ex=1.5,sndflg=True):
         """ Ultimate End-Bearing Capacity of pile. \n
