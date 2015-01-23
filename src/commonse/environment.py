@@ -45,6 +45,8 @@ class WaveBase(Component):
 
     # variables
     z = Array(iotype='in', units='m', desc='heights where wave speed should be computed')
+    z_surface = Float(iotype='in', units='m', desc='vertical location of water surface')
+    z_floor = Float(0.0, iotype='in', units='m', desc='vertical location of sea floor')
 
     # out
     U = Array(iotype='out', units='m/s', desc='magnitude of wave speed at each z location')
@@ -242,13 +244,12 @@ class LinearWaves(WaveBase):
     Uc = Float(iotype='in', units='m/s', desc='mean current speed')
 
     # parameters
-    z_surface = Float(iotype='in', units='m', desc='vertical location of water surface')
     hs = Float(iotype='in', units='m', desc='significant wave height (crest-to-trough)')
     T = Float(iotype='in', units='s', desc='period of waves')
-    z_floor = Float(0.0, iotype='in', units='m', desc='vertical location of sea floor')
     g = Float(9.81, iotype='in', units='m/s**2', desc='acceleration of gravity')
     betaWave = Float(0.0, iotype='in', units='deg', desc='wave angle relative to inertial coordinate system')
 
+    missing_deriv_policy = 'assume_zero'
 
     def execute(self):
 
@@ -290,7 +291,11 @@ class LinearWaves(WaveBase):
         dA_dz = omega*dU_dz
         dA_dUc = omega*dU_dUc
 
-        self.J = vstack([hstack([np.diag(dU_dz), dU_dUc]), hstack([np.diag(dA_dz), dA_dUc])])
+        dU0 = np.zeros(len(self.z) + 1)
+        dU0[-1] = 1.0
+        dA0 = omega * dU0
+
+        self.J = vstack([hstack([np.diag(dU_dz), dU_dUc]), hstack([np.diag(dA_dz), dA_dUc]), np.transpose(dU0), np.transpose(dA0)])
 
 
     def list_deriv_vars(self):
