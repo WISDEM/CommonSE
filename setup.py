@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='CommonSE',
-    version='0.1.1',
+    version='0.1.2',
     description='Common utilities for NREL WISDEM',
     author='S. Andrew Ning',
     author_email='andrew.ning@nrel.gov',

@@ -17,3 +17,19 @@ Andrew Ning <andrew.ning@nrel.gov>
 [FIX]:
 
 - error in csmPPI relative file path fixed
+
+# 0.1.2 ([02/07/2015])
+
+[Katherine Dykes](mailto: katherine.dykes@nrel.gov)
+
+[CHANGE]:
+
+- minor updates to new Material.py file
+
+[FIX]:
+
+- Jacobian for wave component fixed
+
+- Slight update for rna code to match tower changes
+
+- wave height 1.1 multiplier removed since this should be supplied via hs input
