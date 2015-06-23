@@ -21,7 +21,7 @@ def main():
 class Material: #isotropic for the time being
     def __init__(self,**kwargs):
 
-        prms={'matname':'ASTM992_steel','E':2.1e11,'nu':0.33,'G':7.895e10, 'rho':8502., 'fy':345.e6, 'fyc':345.e6} #SI Units
+        prms={'matname':'ASTM992_steel','E':2.1e11,'nu':0.33, 'rho':8502., 'fy':345.e6, 'fyc':345.e6} #SI Units
         prms.update(kwargs) #update in case user put some new params in
         for key in prms:  #Initialize material object with these parameters, possibly updated by user' stuff
             setattr(self,key,prms[key])
