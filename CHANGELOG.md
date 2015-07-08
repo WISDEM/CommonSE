@@ -33,3 +33,11 @@ Andrew Ning <andrew.ning@nrel.gov>
 - Slight update for rna code to match tower changes
 
 - wave height 1.1 multiplier removed since this should be supplied via hs input
+
+# 0.1.3 ([07/08/2015])
+
+[Katherine Dykes](mailto: katherine.dykes@nrel.gov)
+
+[NEW]:
+
+- Added embedment checks for jacket structure, modified Tube to calculate pseudomass, added G to default material parameters
