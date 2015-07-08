@@ -15,7 +15,11 @@ from Material import Material
 pi = math.pi
 
 def main():
-    pass
+    print 'Testing Tube'
+    a=Tube(np.array([5.,6.]),np.array([0.10,0.10]),np.array([10.,10]),mat=Material(matname='heavySteel'))
+    print 'Area and PSEUDOMass of tube a', a.Area, a.pseudomass
+    b=Tube(3.,0.10,10.,mat=Material(matname='heavySteel'))
+    print 'Area and PSEUDOMass of tube b', b.Area, b.pseudomass
 
 class Tube:
     """The Tube Class contains functions to calculate properties of tubular circular cross-sections
@@ -81,6 +85,17 @@ class Tube:
     @property
     def Klr(self): #Klr buckling parameter
         return self.Kbuck*self.L/self.Rgyr
+
+    @property
+    def pseudomass(self): #This uses the buckling length as actual length, !!!CAUTION!!!!!!
+        pseudomass =0. #initialize
+
+        if np.size(self.D)>1:
+            for ii,mat in enumerate(self.mat):
+                    pseudomass +=self.Area*self.L*mat.rho
+        else:
+            pseudomass =(self.Area*self.L*self.mat.rho)
+        return pseudomass
 
 
 if __name__ == '__main__':

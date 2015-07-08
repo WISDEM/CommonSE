@@ -314,7 +314,7 @@ class TowerSoilK(SoilBase):
     """Passthrough of Soil-Structure-INteraction equivalent spring constants used to bypass TowerSoil."""
 
     # variable
-    kin = Array( iotype='in',  desc='spring stiffness. rigid directions should use \
+    kin = Array(np.ones(6)*float('inf'), iotype='in',  desc='spring stiffness. rigid directions should use \
         ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
 
     rigid = Array(iotype='in', dtype=np.bool, desc='directions that should be considered infinitely rigid\

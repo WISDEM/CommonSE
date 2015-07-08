@@ -31,6 +31,8 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
         #From API here is a lookup table
       delta_tab=np.array([15.,20.,25.,30.,35.])  # Soil-pile friction angles
       Nq_tab=np.array([8.,12.,20.,40.,50.])     # Nq values
+      f_tab=np.array([47.8,67.,81.3,95.7,114.8])*1.e3     # skin friction limiting values [Pa]
+      q_tab=np.array([1.9,2.9,4.8,9.6,12.])*1.e6     # end bearing limiting values [Pa]
 
       def cu(z,soilzs,cusoil):
         """Function for UNdrained SHear Strength at various levels:\n
@@ -69,13 +71,13 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
 
         return p00
 
-      def fsoil(z,delta_soil,SF_pile_ex=1.5,sndflg=True):
+      def fsoil(z,delta_soil,SF_pile_ex=soil.SoilSF,sndflg=True):
         """INPUT \n
         z         -float(n),  negative z as in below seabed depth at various n levels [m]
         deltasoil   -float, friction angle between pile and soil [deg] \n
 
         sndflg  -boolean, True if sand; False if clay
-        SF_pile_ex  -float, pile capacity safety factor API RP2A \n
+        SF_pile_ex  -float, pile capacity safety factor (API RP2A WSD is 1.5-2, old LFRD 1.25) \n
         """
         z=np.asarray(z).reshape([1,-1])
         if sndflg:
@@ -83,7 +85,8 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
             K_API=0.8 #plug=False
             if soil.plug: #plugged
                 K_API=1.
-            frsoil=K_API*np.tan(delta_soil*np.pi/180.)*p0(z,soil.zbots,soil.gammas)
+            frsoil=np.min((K_API*np.tan(delta_soil*np.pi/180.)*p0(z,soil.zbots,soil.gammas),scipy.interp(soil.delta,delta_tab,f_tab)))
+
         else:
 
             p00=np.zeros(z.size) #initialize
@@ -121,16 +124,16 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
         frict=fsoil(z,soil.delta,sndflg=soil.sndflg)
         return frict*np.pi*(Dpile+int(not(soil.plug))*(Dpile-2.*tpile))
 
-      def bearCap(z,Atip,SF_pile_ex=1.5,sndflg=True):
+      def bearCap(z,Atip,SF_pile_ex=soil.SoilSF,sndflg=True):
         """ Ultimate End-Bearing Capacity of pile. \n
         INPUT
             z         -float(n),  negative z as in below seabed depth at various n levels [m]\n
             Atip  -float, pile tip area [m2]  \n
-            SF_pile_ex  -float, pile capacity safety factor API RP2A \n
+            SF_pile_ex  -float, pile capacity safety factor  \n
             sndflg  -boolean, True if sand; False if clay
             """
         if sndflg:
-            bearcap=Atip*p0(z,soil.zbots,soil.gammas)*scipy.interp(soil.delta,delta_tab,Nq_tab)
+            bearcap=Atip*np.min((p0(z,soil.zbots,soil.gammas)*scipy.interp(soil.delta,delta_tab,Nq_tab),scipy.interp(soil.delta,delta_tab,q_tab)))
         else:
             bearcap=9.*Atip*cu(z,soil.zbots,soil.cus)
         return bearcap/SF_pile_ex
@@ -142,7 +145,7 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
         wght_embd=-Atip*zembd * rho*gravity # weight of the embedded pile
         Qp=bearCap(zembd,Atip,sndflg=soil.sndflg)
 
-        fun2min=scipy.integrate.romberg(integrand01,zembd,0.,divmax=10)    \
+        fun2min=scipy.integrate.romberg(integrand01,zembd,0.,divmax=20)    \
         -wght_embd-Nhead
         return fun2min[0]
 
