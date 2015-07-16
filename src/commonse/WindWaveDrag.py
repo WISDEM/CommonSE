@@ -97,10 +97,10 @@ class AeroHydroLoads(Component):
     yaw = Float(0.0, iotype='in', units='deg', desc='yaw angle')
 
     outloads= VarTree(FluidLoads(), iotype='in', desc='combined wind and wave loads')
-    ##Px = Array(iotype='out', units='N/m', desc='force per unit length in x-direction')
-    ##Py = Array(iotype='out', units='N/m', desc='force per unit length in y-direction')
-    ##Pz = Array(iotype='out', units='N/m', desc='force per unit length in z-direction')
-    ##qdyn = Array(iotype='out', units='N/m**2', desc='dynamic pressure')
+    Px = Array(iotype='out', units='N/m', desc='force per unit length in x-direction')
+    Py = Array(iotype='out', units='N/m', desc='force per unit length in y-direction')
+    Pz = Array(iotype='out', units='N/m', desc='force per unit length in z-direction')
+    qdyn = Array(iotype='out', units='N/m**2', desc='dynamic pressure')
 
     def execute(self):
         # aero/hydro loads
@@ -116,6 +116,12 @@ class AeroHydroLoads(Component):
         self.outloads.Pz = np.interp(self.z, wind.z, windLoads.z) + np.interp(self.z, wave.z, waveLoads.z)
         self.outloads.qdyn = np.interp(self.z, wind.z, wind.q) + np.interp(self.z, wave.z, wave.q)
         self.outloads.z = self.z
+        #The following are redundant, at one point we will consolidate them to something that works for both tower (not using vartrees) and jacket (still using vartrees)
+        self.Px   =self.outloads.Px
+        self.Py   =self.outloads.Py
+        self.Pz   =self.outloads.Pz
+        self.qdyn =self.outloads.qdyn
+
 # -----------------
 
 class TowerWindDrag(Component):
