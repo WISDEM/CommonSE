@@ -114,7 +114,7 @@ class AeroHydroLoads(Component):
         self.outloads.Px = np.interp(self.z, wind.z, windLoads.x) + np.interp(self.z, wave.z, waveLoads.x)
         self.outloads.Py = np.interp(self.z, wind.z, windLoads.y) + np.interp(self.z, wave.z, waveLoads.y)
         self.outloads.Pz = np.interp(self.z, wind.z, windLoads.z) + np.interp(self.z, wave.z, waveLoads.z)
-        self.outloads.qdyn = np.interp(self.z, wind.z, wind.q) + np.interp(self.z, wave.z, wave.q)
+        self.outloads.qdyn = np.interp(self.z, wind.z, wind.qdyn) + np.interp(self.z, wave.z, wave.qdyn)
         self.outloads.z = self.z
         #The following are redundant, at one point we will consolidate them to something that works for both tower (not using vartrees) and jacket (still using vartrees)
         self.Px   =self.outloads.Px
@@ -192,7 +192,7 @@ class TowerWindDrag(Component):
     def list_deriv_vars(self):
 
         inputs = ('U', 'z', 'd')
-        outputs = ('windLoads.Px', 'windLoads.Py', 'windLoads.Pz', 'windLoads.q', 'windLoads.z')
+        outputs = ('windLoads.Px', 'windLoads.Py', 'windLoads.Pz', 'windLoads.qdyn', 'windLoads.z')
 
         return inputs, outputs
 
@@ -333,7 +333,7 @@ class TowerWaveDrag(Component):
     def list_deriv_vars(self):
 
         inputs = ('U', 'A', 'z', 'd')
-        outputs = ('waveLoads.Px', 'waveLoads.Py', 'waveLoads.Pz', 'waveLoads.q', 'waveLoads.z', 'waveLoads.beta')
+        outputs = ('waveLoads.Px', 'waveLoads.Py', 'waveLoads.Pz', 'waveLoads.qdyn', 'waveLoads.z', 'waveLoads.beta')
 
         return inputs, outputs
 
@@ -374,7 +374,7 @@ def main():
     import matplotlib.pyplot as plt
     plt.plot(load.windLoads.Px, load.windLoads.z)
     plt.plot(load.windLoads.Py, load.windLoads.z)
-    plt.plot(load.windLoads.q, load.windLoads.z)
+    plt.plot(load.windLoads.qdyn, load.windLoads.z)
     plt.show()
 
 if __name__ == '__main__':
