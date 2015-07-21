@@ -174,7 +174,7 @@ class TowerWindDrag(Component):
         self.windLoads.Px = Px
         self.windLoads.Py = Py
         self.windLoads.Pz = Pz
-        self.windLoads.q = q
+        self.windLoads.qdyn = q
         self.windLoads.z = self.z
         self.windLoads.beta = beta
 
@@ -309,7 +309,7 @@ class TowerWaveDrag(Component):
         self.waveLoads.Px = Px
         self.waveLoads.Py = Py
         self.waveLoads.Pz = Pz
-        self.waveLoads.q = q
+        self.waveLoads.qdyn = q
         self.waveLoads.z = self.z
         self.waveLoads.beta = beta
         self.waveLoads.d = d
