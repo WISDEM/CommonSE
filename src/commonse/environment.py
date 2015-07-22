@@ -244,8 +244,8 @@ class LinearWaves(WaveBase):
     Uc = Float(iotype='in', units='m/s', desc='mean current speed')
 
     # parameters
-    hs = Float(iotype='in', units='m', desc='significant wave height (crest-to-trough)')
-    T = Float(iotype='in', units='s', desc='period of waves')
+    hmax = Float(iotype='in', units='m', desc='maximum wave height (crest-to-trough)')
+    T = Float(iotype='in', units='s', desc='period of maximum wave height')
     g = Float(9.81, iotype='in', units='m/s**2', desc='acceleration of gravity')
     betaWave = Float(0.0, iotype='in', units='deg', desc='wave angle relative to inertial coordinate system')
 
@@ -257,7 +257,7 @@ class LinearWaves(WaveBase):
         d = self.z_surface - self.z_floor
 
         # design wave height
-        h = self.hs
+        h = self.hmax
 
         # circular frequency
         omega = 2.0*math.pi/self.T
