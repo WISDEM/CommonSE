@@ -39,7 +39,7 @@ class SoilC():
     #start by setting default values in a dictionary fashion
         Pprms={'zbots':-np.array([3.,5.,7.,15.,30.,50.]), 'gammas':np.array([10000,10000,10000,10000,10000,10000]),\
         'cus':np.array([60000,60000,60000,60000,60000,60000]), 'phis':np.array([36.,33.,26.,37.,35.,37.5]),\
-        'delta':25.,'sndflg':True, 'plug':False, 'bwtable':True, 'PenderSwtch':False, 'SoilSF':1.25, 'qu': 200.e3}
+        'delta':25.,'sndflg':True, 'plug':False, 'bwtable':True, 'PenderSwtch':False, 'SoilSF':2., 'qu': 200.e3}
         prms=Pprms.copy()
         prms.update(kwargs)
         for key in kwargs:
@@ -94,7 +94,7 @@ def SubgrReact(soilobj,Lp, sndflg=True, bwtable=True):
 
         return ks/soilobj.SoilSF
 
-def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],batter=np.nan,psi=-45.*np.pi/180.):
+def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,nus=0.5,PenderSwtch=False,sndflg=True, H=[],M=[],batter=np.nan,psi=-45.*np.pi/180.):
     """This function returns a 6x6 stiffness matrix relative to mudline, assuming a \n
        coefficient of subgrade reation ks [N/m3] linear with depth below mudline.\n
        It uses either Pender's elastic soil medium approximation or the Matlock and Reese (1960)'s  form.\n
@@ -107,7 +107,9 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
        Gp           -float, pile Shear module, [N/m2].\n
        Jxx_p        -float, pile x-section area moment of inertia, [m4].\n
        loadZ        -float, application point above ground level of H and M.
+       nus          -float, Poisson's ratio for soil. Default =0.5 from Pender's 1993.
        PenderSwtch  -boolean, True for Pender's version of flexibility coefficients, False for Matlock and Reese(1960)\n
+       sndflg       -boolean, True for sand, Flase for clay.\n
        H            -float, Shear at the top of the pile, positive along x: MANDATORY IF PenderSwtch=True \n
        M            -floar, Moment at the top of the pile: MANDATORY IF PenderSwtch=True \n
        batter       -float, 2D batter in the xz plane for the pile: positive batter means tip is to the left of head and H>0 is pointing to the right \n
@@ -122,11 +124,17 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
             Es_D=ks*Dp
             K=Ep/Es_D
             La=1.3*Dp*K**(0.222) #active length of pile
+
             #if Lp>=La:  #long(flexible) pile
             fxH=3.2*K**(-.333)/(Es_D*Dp) #CxF
             fxM=ftH=5.*K**(-.556)/(Es_D*Dp**2)  #CxM=CthtF
             ftM=13.6*K**(-0.778)/(Es_D*Dp**3)   #CthtM
             L_Mmax=0.41*La #Location of maximum moment from ground level
+            if sndflg:
+                fxH=2.14*K**(-0.29)/(Es_D*Dp) #CxF
+                fxM=ftH=3.43*K**(-0.53)/(Es_D*Dp**2)  #CxM=CthtF
+                ftM=12.16*K**(-0.77)/(Es_D*Dp**3)   #CthtM
+
 
             M=M+loadZ*H #account for eccentricity
             f=M/(Dp*H)  #Eccentricity of the load at the pile head
@@ -139,7 +147,6 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
                 fxM=ftH=0.4*LL**(-0.88)/(Es_D*Dp**2)  #CxM=CthtF
                 ftM=0.6*LL**(-1.67)/(Es_D*Dp**3)   #CthtM
             elif Lp<La:  #intermediate length: use 1.25 the calculated values; correct for fxH, but pushing it for the others
-                fxH *=1.25
                 fxH*=1.25 #CxF
                 fxM*=1.25 #CxM
                 ftH *=1.25  #CxM=CthtF
@@ -164,6 +171,12 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
     b=LL/RR
     Kz=1.8*E_SL*Dp*LL**0.55*RR**(-b)
 
+    #Add torsional stiffness, approximating from Guo and Randolph as flexible pile head stiffness with linear trend of Es.
+    Gpeq=32*Gp*Jxx_p/(np.pi*Dp**4) #equivalent G for pile
+    Lc=Dp/16. * (2*(1+nus)*Gpeq/(ks*Dp))**(1./3) #critical torsional pile length
+    Gsc=ks*Lc/(2*(1+nus)) #soil G at critical length
+    Kpsipsi=np.pi/16 * np.sqrt(2) * Dp**3 *np.sqrt(Gpeq/Gsc)
+
     #Assemble a 6x6 matrix to be returned, with all terms positive, since we do care about abs values not actual direction of forces
     Klocal=np.zeros([6,6]) #Initialize pile head stiffness matrix, this is at the mudline
     Klocal[0,0]=Klocal[1,1]=Kmat[0,0]  #Kx=Ky
@@ -171,7 +184,7 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
     Klocal[2,2]=Kz
     Klocal[1,3]=Klocal[3,1]=Kmat[0,1]  #Ky_thetax=Kthetax_y :force along y due to unit rotation about x
     Klocal[3,3]=Klocal[4,4]=Kmat[1,1]  #Kthetax_thetax=Ktheta_y_thetay
-    Klocal[5,5]=2.*Gp*Jxx_p  #Assume torsional stiffness proportional to the pile torsional stiffness only
+    Klocal[5,5]=Kpsipsi   #torsional stiffness
 
     Kglobal=Klocal #initialize for vertical piles
 
@@ -184,12 +197,12 @@ def SoilPileStiffness(ks,Dp,Lp,Ep,Gp,Jxx_p,loadZ=0,PenderSwtch=False,H=[],M=[],b
 
         Cl2g=np.zeros([6,6]) #Initialize Transformtation matrix from local to global
         Cl2g[0,0]=Cl2g[3,3]=cpsi*ca3D
-        Cl2g[0,1]=Cl2g[3,4]=-spsi*ca3D
-        Cl2g[0,2]=Cl2g[3,5]=sa3D
-        Cl2g[1,0]=Cl2g[4,3]=spsi
+        Cl2g[0,1]=Cl2g[3,4]=-spsi
+        Cl2g[0,2]=Cl2g[3,5]=-sa3D*cpsi
+        Cl2g[1,0]=Cl2g[4,3]=ca3D*spsi
         Cl2g[1,1]=Cl2g[4,4]=cpsi
-        Cl2g[2,0]=Cl2g[5,3]=-cpsi*sa3D
-        Cl2g[2,1]=Cl2g[5,4]=spsi*sa3D
+        Cl2g[1,2]=Cl2g[4,5]=-spsi*sa3D
+        Cl2g[2,0]=Cl2g[5,3]=sa3D
         Cl2g[2,2]=Cl2g[5,5]=ca3D
 
         Kglobal=np.dot(Cl2g,np.dot(Klocal,Cl2g.T))
