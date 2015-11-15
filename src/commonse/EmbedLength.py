@@ -146,8 +146,8 @@ def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
         Qp=bearCap(zembd,Atip,sndflg=soil.sndflg)
 
         fun2min=scipy.integrate.romberg(integrand01,zembd,0.,divmax=20)    \
-        -wght_embd-Nhead
-        return fun2min[0]
+        -wght_embd-Nhead #+Qp
+        return fun2min[0] #Note not using Qp to simulate pullout also
 
       #Solve teh equation here
 
