@@ -302,7 +302,7 @@ class TowerWaveDrag(Component):
         self.waveLoads.Px0 = Px0
         self.waveLoads.Py0 = Py0
         self.waveLoads.Pz0 = Pz0
-        self.waveLoads.q0 = q0
+        self.waveLoads.qdyn0 = q0
         self.waveLoads.beta0 = beta0
 
         # pack data
