@@ -22,8 +22,7 @@ Copyright (c) NREL. All rights reserved.
 import math
 import numpy as np
 
-from openmdao.main.api import Component, VariableTree
-from openmdao.main.datatypes.api import Float, Array,VarTree
+from openmdao.api import Component
 from commonse.utilities import sind, cosd  # , linspace_with_deriv, interp_with_deriv, hstack, vstack
 from commonse.csystem import DirectionVector
 
@@ -91,25 +90,72 @@ class FluidLoads(VariableTree):
 
 class AeroHydroLoads(Component):
 
-    windLoads = VarTree(FluidLoads(), iotype='in', desc='wind loads in inertial coordinate system')
-    waveLoads = VarTree(FluidLoads(), iotype='in', desc='wave loads in inertial coordinate system')
-    z = Array(iotype='in', desc='locations along tower')
-    yaw = Float(0.0, iotype='in', units='deg', desc='yaw angle')
+    def __init__(self, nPoints):
 
-    outloads= VarTree(FluidLoads(), iotype='in', desc='combined wind and wave loads')
-    Px = Array(iotype='out', units='N/m', desc='force per unit length in x-direction')
-    Py = Array(iotype='out', units='N/m', desc='force per unit length in y-direction')
-    Pz = Array(iotype='out', units='N/m', desc='force per unit length in z-direction')
-    qdyn = Array(iotype='out', units='N/m**2', desc='dynamic pressure')
+        super(AeroHydroLoads, self).__init__()
 
-    def execute(self):
+        #inputs
+
+        self.add_param('windLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_param('windLoads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_param('windLoads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_param('windLoads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_param('windLoads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_param('windLoads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_param('windLoads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_param('windLoads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('windLoads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('windLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('windLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        self.add_param('windLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+
+
+        self.add_param('waveLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_param('waveLoads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_param('waveLoads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_param('waveLoads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_param('waveLoads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_param('waveLoads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_param('waveLoads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_param('waveLoads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('waveLoads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('waveLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('waveLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        self.add_param('waveLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+
+
+        self.add_param('z', np.zeros(nPoints), desc='locations along tower')
+        self.add_param('yaw', 0.0, units='deg', desc='yaw angle')
+
+
+        self.add_param('outloads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_param('outloads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_param('outloads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_param('outloads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_param('outloads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_param('outloads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_param('outloads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_param('outloads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('outloads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('outloads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('outloads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        self.add_param('outloads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+
+
+        #outputs
+        self.add_output('Px', np.zeros(nPoints), units='N/m', desc='force per unit length in x-direction')
+        self.add_output('Py', np.zeros(nPoints), units='N/m', desc='force per unit length in y-direction')
+        self.add_output('Pz', np.zeros(nPoints), units='N/m', desc='force per unit length in z-direction')
+        self.add_output('qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+
+    def solve_nonlinear(self, params, unknowns, resids):
         # aero/hydro loads
-        wind = self.windLoads
-        wave = self.waveLoads
-        hubHt = self.z[-1]  # top of tower
-        betaMain = np.interp(hubHt, self.z, wind.beta)  # wind coordinate system defined relative to hub height
-        windLoads = DirectionVector(wind.Px, wind.Py, wind.Pz).inertialToWind(betaMain).windToYaw(self.yaw)
-        waveLoads = DirectionVector(wave.Px, wave.Py, wave.Pz).inertialToWind(betaMain).windToYaw(self.yaw)
+        wind = params['windLoads']
+        wave = params['waveLoads']
+        hubHt = params['z'][-1]  # top of tower
+        betaMain = np.interp(hubHt, params['z'], wind.beta)  # wind coordinate system defined relative to hub height
+        windLoads = DirectionVector(wind.Px, wind.Py, wind.Pz).inertialToWind(betaMain).windToYaw(params['yaw'])
+        waveLoads = DirectionVector(wave.Px, wave.Py, wave.Pz).inertialToWind(betaMain).windToYaw(params['yaw'])
 
         self.outloads.Px = np.interp(self.z, wind.z, windLoads.x) + np.interp(self.z, wave.z, waveLoads.x)
         self.outloads.Py = np.interp(self.z, wind.z, windLoads.y) + np.interp(self.z, wave.z, waveLoads.y)
