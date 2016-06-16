@@ -142,7 +142,7 @@ class PowerWind(WindBase):
 
         idx = z > z0
         J['U', 'Uref'][idx] = unknowns['U'][idx]/params['Uref']
-        J['U', 'z'][idx] = unknowns['U'][idx]*params['shearExp']/(params['z'][idx]-params[z0])
+        J['U', 'z'][idx] = unknowns['U'][idx]*params['shearExp']/(params['z'][idx]-params['z0'])
         J['U', 'zref'][idx] = -unknowns['U'][idx]*params['shearExp']/(params['zref']-params['z0'])
 
         return J
@@ -195,45 +195,46 @@ class PowerWind(WindBase):
 class LogWind(WindBase):
     """logarithmic-profile wind"""
 
-    # parameters
-    z_roughness = Float(10.0, iotype='in', units='mm', desc='surface roughness length')
-    betaWind = Float(0.0, iotype='in', units='deg', desc='wind angle relative to inertial coordinate system')
+    def __init__(self):
 
-    missing_deriv_policy = 'assume_zero'
+        super(LogWind, self).__init__()
 
-    def execute(self):
+        # parameters
+        self.add_param('z_roughness', 10.0, units='mm', desc='surface roughness length')
+        self.add_param('betaWind', 0.0, units='deg', desc='wind angle relative to inertial coordinate system')
+
+
+    def solve_nonlinear(self, params, unknowns, resids):
 
         # rename
-        z = self.z
-        zref = self.zref
-        z0 = self.z0
-        z_roughness = self.z_roughness/1e3  # convert to m
+        z = params['z']
+        zref = params['zref']
+        z0 = params['z0']
+        z_roughness = params['z_roughness']/1e3  # convert to m
 
         # find velocity
         idx = [z - z0 > z_roughness]
-        self.U = np.zeros_like(z)
-        self.U[idx] = self.Uref*np.log((z[idx] - z0)/z_roughness) / math.log((zref - z0)/z_roughness)
-        self.beta = self.betaWind*np.ones_like(z)
+        unknowns['U'] = np.zeros_like(z)
+        unknowns['U'][idx] = params['Uref']*np.log((z[idx] - z0)/z_roughness) / math.log((zref - z0)/z_roughness)
+        unknowns['beta'] = params['betaWind']*np.ones_like(z)
 
 
-    def list_deriv_vars(self):
-
-        inputs = ('Uref', 'z', 'zref')
-        outputs = ('U',)
-
-        return inputs, outputs
-
-
-    def provideJ(self):
+    #TODO I don't know what to do here...
+    def linearize(self, params, unknowns, resids):
 
         # rename
-        z = self.z
-        zref = self.zref
-        z0 = self.z0
-        z_roughness = self.z_roughness/1e3
-        Uref = self.Uref
+        z = params['z']
+        zref = params['zref']
+        z0 = params['z0']
+        z_roughness = params['z_roughness']/1e3
+        Uref = params['Uref']
 
-        n = len(z)
+        n = len(z])
+
+        J = {}
+
+        J['U', 'Uref'] = np.zeros(n)
+        J['U', 'z_diag'] #?????
 
         dU_dUref = np.zeros(n)
         dU_dz_diag = np.zeros(n)
@@ -255,47 +256,50 @@ class LogWind(WindBase):
 class LinearWaves(WaveBase):
     """linear (Airy) wave theory"""
 
-    # variables
-    Uc = Float(iotype='in', units='m/s', desc='mean current speed')
+    def __init__(self):
 
-    # parameters
-    hmax = Float(iotype='in', units='m', desc='maximum wave height (crest-to-trough)')
-    T = Float(iotype='in', units='s', desc='period of maximum wave height')
-    g = Float(9.81, iotype='in', units='m/s**2', desc='acceleration of gravity')
-    betaWave = Float(0.0, iotype='in', units='deg', desc='wave angle relative to inertial coordinate system')
+        super(LinearWaves, self).__init__()
 
-    missing_deriv_policy = 'assume_zero'
+        # variables
+        self.add_param('Uc', 0.0, units='m/s', desc='mean current speed')
 
-    def execute(self):
+        # parameters
+        self.add_param('hmax', 0.0, units='m', desc='maximum wave height (crest-to-trough)')
+        self.add_param('T', 0.0, units='s', desc='period of maximum wave height')
+        self.add_param('g', 9.81, units='m/s**2', desc='acceleration of gravity')
+        self.add_param('betaWave', 0.0, units='deg', desc='wave angle relative to inertial coordinate system')
+
+
+    def solve_nonlinear(self, params, unknowns, resids):
 
         # water depth
-        d = self.z_surface - self.z_floor
+        d = params['z_surface'] - params['z_floor']
 
         # design wave height
-        h = self.hmax
+        h = params['hmax']
 
         # circular frequency
-        omega = 2.0*math.pi/self.T
+        omega = 2.0*math.pi/params['T']
 
         # compute wave number from dispersion relationship
-        k = brentq(lambda k: omega**2 - self.g*k*math.tanh(d*k), 0, 10*omega**2/self.g)
+        k = brentq(lambda k: omega**2 - params['g']*k*math.tanh(d*k), 0, 10*omega**2/params['g'])
 
         # zero at surface
-        z_rel = self.z - self.z_surface
+        z_rel = params['z'] - params['z_surface']
 
         # maximum velocity
-        self.U = h/2.0*omega*np.cosh(k*(z_rel + d))/math.sinh(k*d) + self.Uc
-        self.U0 = h/2.0*omega*np.cosh(k*(0. + d))/math.sinh(k*d) + self.Uc
+        unknowns['U'] = h/2.0*omega*np.cosh(k*(z_rel + d))/math.sinh(k*d) + params['Uc']
+        unknowns['U0'] = h/2.0*omega*np.cosh(k*(0. + d))/math.sinh(k*d) + sparams['Uc']
 
         # check heights
-        self.U[np.logical_or(self.z < self.z_floor, self.z > self.z_surface)] = 0.
+        unknowns['U'][np.logical_or(params['z'] < parmas['z_floor'], params['z'] > params['z_surface'])] = 0.
 
         # acceleration
-        self.A  = self.U * omega
-        self.A0 = self.U0 * omega
+        unknowns['A']  = unknowns['U'] * omega
+        unknowns['A0'] = unknowns['U0'] * omega
         # angles
-        self.beta = self.betaWave*np.ones_like(self.z)
-        self.beta0 =self.betaWave
+        unknowns['beta'] = params['betaWave']*np.ones_like(params['z'])
+        unknowns['beta0'] = params['betaWave']
 
         # derivatives
         dU_dz = h/2.0*omega*np.sinh(k*(z_rel + d))/math.sinh(k*d)*k
