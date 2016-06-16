@@ -10,8 +10,7 @@ Copyright (c) NREL. All rights reserved.
 import math
 import numpy as np
 from scipy.optimize import brentq
-from openmdao.main.api import Component
-from openmdao.main.datatypes.api import Float, Array
+from openmdao.api import Component
 
 from utilities import hstack, vstack
 
@@ -23,61 +22,68 @@ from utilities import hstack, vstack
 class WindBase(Component):
     """base component for wind speed/direction"""
 
-    # TODO: if I put required=True here for Uref there is another bug
+    def __init__(self, nPoints):
 
-    # variables
-    Uref = Float(iotype='in', units='m/s', desc='reference wind speed (usually at hub height)')
-    zref = Float(iotype='in', units='m', desc='corresponding reference height')
-    z = Array(iotype='in', units='m', desc='heights where wind speed should be computed')
+        super(WindBase, self).__init__()
 
-    # parameters
-    z0 = Float(0.0, iotype='in', units='m', desc='bottom of wind profile (height of ground/sea)')
+        # TODO: if I put required=True here for Uref there is another bug
 
-    # out
-    U = Array(iotype='out', units='m/s', desc='magnitude of wind speed at each z location')
-    beta = Array(iotype='out', units='deg', desc='corresponding wind angles relative to inertial coordinate system')
+        # variables
+        self.add_param('Uref', 0.0, units='m/s', desc='reference wind speed (usually at hub height)')
+        self.add_param('zref', 0.0, units='m', desc='corresponding reference height')
+        self.add_param('z', np.zeros(nPoints), units='m', desc='heights where wind speed should be computed')
 
-    missing_deriv_policy = 'assume_zero'  # TODO: for now OpenMDAO issue
+        # parameters
+        self.add_param('z0', 0.0, units='m', desc='bottom of wind profile (height of ground/sea)')
+
+        # out
+        self.add_output('U', np.zeros(nPoints), units='m/s', desc='magnitude of wind speed at each z location')
+        self.add_output('beta', np.zeros(nPoints), units='deg', desc='corresponding wind angles relative to inertial coordinate system')
 
 
 class WaveBase(Component):
     """base component for wave speed/direction"""
 
-    # variables
-    z = Array(iotype='in', units='m', desc='heights where wave speed should be computed')
-    z_surface = Float(iotype='in', units='m', desc='vertical location of water surface')
-    z_floor = Float(0.0, iotype='in', units='m', desc='vertical location of sea floor')
+    def __init__(self, nPoints):
 
-    # out
-    U = Array(iotype='out', units='m/s', desc='magnitude of wave speed at each z location')
-    A = Array(iotype='out', units='m/s**2', desc='magnitude of wave acceleration at each z location')
-    beta = Array(iotype='out', units='deg', desc='corresponding wave angles relative to inertial coordinate system')
-    U0 = Float(iotype='out', units='m/s', desc='magnitude of wave speed at z=MSL')
-    A0 = Float(iotype='out', units='m/s**2', desc='magnitude of wave acceleration at z=MSL')
-    beta0 = Float(iotype='out', units='deg', desc='corresponding wave angles relative to inertial coordinate system at z=MSL')
+        super(WaveBase, self).__init__()
 
-    missing_deriv_policy = 'assume_zero'
+        # variables
+        self.add_param('z', np.zeros(nPoints), units='m', desc='heights where wave speed should be computed')
+        self.add_param('z_surface', 0.0, units='m', desc='vertical location of water surface')
+        self.add_param('z_floor', 0.0, units='m', desc='vertical location of sea floor')
 
-    def execute(self):
+        # out
+        self.add_output('U', np.zeros(nPoints), units='m/s', desc='magnitude of wave speed at each z location')
+        self.add_output('A', np.zeros(nPoints), units='m/s**2', desc='magnitude of wave acceleration at each z location')
+        self.add_output('beta', np.zeros(nPoints), units='deg', desc='corresponding wave angles relative to inertial coordinate system')
+        self.add_output('U0', 0.0, units='m/s', desc='magnitude of wave speed at z=MSL')
+        self.add_output('A0', 0.0, units='m/s**2', desc='magnitude of wave acceleration at z=MSL')
+        self.add_output('beta0', 0.0, units='deg', desc='corresponding wave angles relative to inertial coordinate system at z=MSL')
+
+
+    def solve_nonlinear(self, params, unknowns, resids):
         """default to no waves"""
-        n = len(self.z)
-        self.U = np.zeros(n)
-        self.A = np.zeros(n)
-        self.beta = np.zeros(n)
-        self.U0 = 0.
-        self.A0 = 0.
-        self.beta0 = 0.
+        n = len(params['z'])
+        unknowns['U'] = np.zeros(n)
+        unknowns['A'] = np.zeros(n)
+        unknowns['beta'] = np.zeros(n)
+        unknowns['U0'] = 0.
+        unknowns['A0'] = 0.
+        unknowns['beta0'] = 0.
 
 
 
 class SoilBase(Component):
     """base component for soil stiffness"""
 
-    # out
-    k = Array(iotype='out', units='N/m', required=True, desc='spring stiffness. rigid directions should use \
-        ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
+    def __init__(self):
 
-    missing_deriv_policy = 'assume_zero'  # TODO: for now OpenMDAO issue
+        super(SoilBase, self).__init__()
+
+        # out
+        self.add_output('k', np.zeros(6), units='N/m', required=True, desc='spring stiffness. rigid directions should use \
+        ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
 
 
 # -----------------------
@@ -89,26 +95,28 @@ class PowerWind(WindBase):
     """power-law profile wind.  any nodes must not cross z0, and if a node is at z0
     it must stay at that point.  otherwise gradients crossing the boundary will be wrong."""
 
-    # parameters
-    shearExp = Float(0.2, iotype='in', desc='shear exponent')
-    betaWind = Float(0.0, iotype='in', units='deg', desc='wind angle relative to inertial coordinate system')
+    def __init__(self):
 
-    missing_deriv_policy = 'assume_zero'
+        super(PowerWind, self).__init__()
+
+        # parameters
+        self.add_param('shearExp', 0.2, desc='shear exponent')
+        self.add_param('betaWind', 0.0, units='deg', desc='wind angle relative to inertial coordinate system')
 
 
-    def execute(self):
+    def solve_nonlinear(self, params, unknowns, resids):
 
         # rename
-        z = self.z
-        zref = self.zref
-        z0 = self.z0
+        z = params['z']
+        zref = params['zref']
+        z0 = params['z0']
 
         # velocity
         idx = z > z0
         n = len(z)
-        self.U = np.zeros(n)
-        self.U[idx] = self.Uref*((z[idx] - z0)/(zref - z0))**self.shearExp
-        self.beta = self.betaWind*np.ones_like(z)
+        unknowns['U'] = np.zeros(n)
+        unknowns['U'][idx] = params['Uref']*((z[idx] - z0)/(zref - z0))**params['shearExp']
+        unknowns['beta'] = params['betaWind']*np.ones_like(z)
 
         # # add small cubic spline to allow continuity in gradient
         # k = 0.01  # fraction of profile with cubic spline
@@ -123,17 +131,24 @@ class PowerWind(WindBase):
         # self.zsmall = zsmall
         # self.k = k
 
+    def linearize(self, params, unknowns, resids):
 
-    def list_deriv_vars(self):
+        J = {}
 
-        inputs = ('Uref', 'z', 'zref')
-        outputs = ('U',)
+        n = len(params['z'])
+        J['U', 'Uref'] = np.zeros(n)
+        J['U', 'z'] = np.zeros(n)
+        J['U', 'zref'] = np.zeros(n)
 
-        return inputs, outputs
+        idx = z > z0
+        J['U', 'Uref'][idx] = unknowns['U'][idx]/params['Uref']
+        J['U', 'z'][idx] = unknowns['U'][idx]*params['shearExp']/(params['z'][idx]-params[z0])
+        J['U', 'zref'][idx] = -unknowns['U'][idx]*params['shearExp']/(params['zref']-params['z0'])
 
+        return J
+        #TODO not sure if I did this right...
 
-    def provideJ(self):
-
+        """
         # rename
         z = self.z
         zref = self.zref
@@ -174,7 +189,7 @@ class PowerWind(WindBase):
 
         return J
 
-
+        """
 
 
 class LogWind(WindBase):
