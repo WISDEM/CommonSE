@@ -14,6 +14,8 @@ from openmdao.api import Component
 
 from utilities import hstack, vstack
 
+#TODO NOT DONE. Finish and do all the Jacobians
+
 # -----------------
 #  Base Components
 # -----------------
@@ -229,7 +231,7 @@ class LogWind(WindBase):
         z_roughness = params['z_roughness']/1e3
         Uref = params['Uref']
 
-        n = len(z])
+        n = len(z)
 
         J = {}
 
@@ -332,14 +334,17 @@ class LinearWaves(WaveBase):
 class TowerSoilK(SoilBase):
     """Passthrough of Soil-Structure-INteraction equivalent spring constants used to bypass TowerSoil."""
 
-    # variable
-    kin = Array(np.ones(6)*float('inf'), iotype='in',  desc='spring stiffness. rigid directions should use \
-        ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
+    def __init__(self):
 
-    rigid = Array(iotype='in', dtype=np.bool, desc='directions that should be considered infinitely rigid\
-        order is x, theta_x, y, theta_y, z, theta_z')
+        super(LinearWaves, self).__init__()
 
-    missing_deriv_policy = 'assume_zero'
+        # variable
+        self.add_param('kin', np.ones(6)*float('inf'),  desc='spring stiffness. rigid directions should use \
+            ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
+        self.add_param('rigid' = Array(iotype='in', dtype=np.bool, desc='directions that should be considered infinitely rigid\
+            order is x, theta_x, y, theta_y, z, theta_z')
+
+        missing_deriv_policy = 'assume_zero'
 
 
     def execute(self):
