@@ -4,8 +4,7 @@ from openmdao.api import Component
 from commonse.utilities import hstack, vstack
 from commonse.csystem import DirectionVector
 
-#TODO NEED TO DO THE JACOBIANS
-#TODO Done with RNAMass
+#TODO CHECK
 
 
 class RNAMass(Component):
@@ -177,20 +176,17 @@ class RotorLoads(Component):
             rna_cm[0] *= -1
         r_hub = DirectionVector.fromArray(r_hub)
         rna_cm = DirectionVector.fromArray(rna_cm)
-        #TODO no idea what this is doing
         self.save_rhub = r_hub
         self.save_rcm = rna_cm
 
         # aerodynamic moments
         M = M + r_hub.cross(F)
-        #TODO no idea what this is doing
         self.saveF = F
 
 
         # add weight loads
         F_w = DirectionVector(0.0, 0.0, -params['m_RNA']*params['g'])
         M_w = rna_cm.cross(F_w)
-        #TODO no idea what this is doing
         self.saveF_w = F_w
 
         Fout = F + F_w
@@ -214,9 +210,9 @@ class RotorLoads(Component):
 
         return inputs, outputs
 
-    def provideJ(self):
+    def linearize(self, params, unknowns, resids):
 
-        dF = DirectionVector.fromArray(self.F).hubToYaw(self.tilt)
+        dF = DirectionVector.fromArray(params['F']).hubToYaw(params['tilt'])
         dFx, dFy, dFz = dF.dx, dF.dy, dF.dz
 
         dtopF_dFx = np.array([dFx['dx'], dFy['dx'], dFz['dx']])
@@ -225,10 +221,10 @@ class RotorLoads(Component):
         dtopF_dF = hstack([dtopF_dFx, dtopF_dFy, dtopF_dFz])
         dtopF_w_dm = np.array([0.0, 0.0, -self.g])
 
-        dtopF = hstack([dtopF_dF, np.zeros((3, 6)), dtopF_w_dm, np.zeros((3, 3))])
+        #dtopF = hstack([dtopF_dF, np.zeros((3, 6)), dtopF_w_dm, np.zeros((3, 3))])
 
 
-        dM = DirectionVector.fromArray(self.M).hubToYaw(self.tilt)
+        dM = DirectionVector.fromArray(params['M']).hubToYaw(params['tilt'])
         dMx, dMy, dMz = dM.dx, dM.dy, dM.dz
         dMxcross, dMycross, dMzcross = self.save_rhub.cross_deriv(self.saveF, 'dr', 'dF')
 
@@ -246,7 +242,7 @@ class RotorLoads(Component):
 
         dMx_w_cross, dMy_w_cross, dMz_w_cross = self.save_rcm.cross_deriv(self.saveF_w, 'dr', 'dF')
 
-        if self.rna_weightM:
+        if params['rna_weightM']:
             dtopM_drnacm = np.array([dMx_w_cross['dr'], dMy_w_cross['dr'], dMz_w_cross['dr']])
             dtopM_dF_w = np.array([dMx_w_cross['dF'], dMy_w_cross['dF'], dMz_w_cross['dF']])
         else:
@@ -254,12 +250,25 @@ class RotorLoads(Component):
             dtopM_dF_w = np.zeros((3, 3))
         dtopM_dm = np.dot(dtopM_dF_w, dtopF_w_dm)
 
-        if self.downwind:
+        if params['downwind']:
             dtopM_dr[:, 0] *= -1
             dtopM_drnacm[:, 0] *= -1
 
-        dtopM = hstack([dtopM_dF, dtopM_dM, dtopM_dr, dtopM_dm, dtopM_drnacm])
+        #dtopM = hstack([dtopM_dF, dtopM_dM, dtopM_dr, dtopM_dm, dtopM_drnacm])
 
-        J = vstack([dtopF, dtopM])
+        J = {}
+        J['top_F', 'F'] = dtopF_dF
+        J['top_F', 'M'] = np.zeros((3, 3))
+        J['top_F', 'r_hub'] = np.zeros((3, 3))
+        J['top_F', 'm_RNA'] = dtopF_w_dm
+        J['top_F', 'rna_cm'] = np.zeros((3, 3))
+
+        J['top_M', 'F'] = dtopM_dF
+        J['top_M', 'M'] = dtopM_dM
+        J['top_M', 'r_hub'] = dtopM_dr  
+        J['top_M', 'm_RNA'] = dtopM_dm  
+        J['top_M', 'rna_cm'] = dtopM_drnacm  
 
         return J
+
+
