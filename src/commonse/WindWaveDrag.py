@@ -248,39 +248,62 @@ class TowerWindDrag(Component):
         unknowns['windLoads'].z = self.z
         unknowns['windLoads'].beta = beta
 
-        #TODO need to do this still
+
+    def linearize(self, params, unknowns, resids):
+
+        # rename
+        rho = params['rho']
+        U = params['U']
+        d = params['d']
+        mu = params['mu']
+        beta = params['beta']
+
+        # dynamic pressure
+        q = 0.5*rho*U**2
+        
+        # Reynolds number and drag
+        if params['cd_usr']:
+            cd = params['cd_usr']
+            Re = 1.0
+            dcd_dRe = 0.0
+        else:
+            Re = rho*U*d/mu
+            cd, dcd_dRe = cylinderDrag(Re)
+
         # derivatives
-        self.dq_dU = rho*U
-        const = (self.dq_dU*cd + q*dcd_dRe*rho*d/mu)*d
-        self.dPx_dU = const*cosd(beta)
-        self.dPy_dU = const*sind(beta)
+        dq_dU = rho*U
+        const = (dq_dU*cd + q*dcd_dRe*rho*d/mu)*d
+        dPx_dU = const*cosd(beta)
+        dPy_dU = const*sind(beta)
 
         const = (cd + dcd_dRe*Re)*q
-        self.dPx_dd = const*cosd(beta)
-        self.dPy_dd = const*sind(beta)
+        dPx_dd = const*cosd(beta)
+        dPy_dd = const*sind(beta)
 
-
-    def list_deriv_vars(self):
-
-        inputs = ('U', 'z', 'd')
-        outputs = ('windLoads.Px', 'windLoads.Py', 'windLoads.Pz', 'windLoads.qdyn', 'windLoads.z')
-
-        return inputs, outputs
-
-
-    def provideJ(self):
-
-        n = len(self.z)
+        n = len(params['z'])
 
         zeron = np.zeros((n, n))
+        
+        J = {}
+        J['windLoads.Px', 'U'] = np.diag(dPx_dU)
+        J['windLoads.Px', 'z'] = zeron 
+        J['windLoads.Px', 'd'] = np.diag(dPx_dd)
+ 
+        J['windLoads.Py', 'U'] = np.diag(dPy_dU)
+        J['windLoads.Py', 'z'] = zeron
+        J['windLoads.Py', 'd'] = np.diag(dPy_dd)
 
-        dPx = np.hstack([np.diag(self.dPx_dU), zeron, np.diag(self.dPx_dd)])
-        dPy = np.hstack([np.diag(self.dPy_dU), zeron, np.diag(self.dPy_dd)])
-        dPz = np.zeros((n, 3*n))
-        dq = np.hstack([np.diag(self.dq_dU), np.zeros((n, 2*n))])
-        dz = np.hstack([zeron, np.eye(n), zeron])
+        J['windLoads.Pz', 'U'] = zeron
+        J['windLoads.Pz', 'z'] = zeron 
+        J['windLoads.Pz', 'd'] = zeron
 
-        J = np.vstack([dPx, dPy, dPz, dq, dz])
+        J['windLoads.qdyn', 'U'] = np.diag(dq_dU)
+        J['windLoads.qdyn', 'z'] = zeron
+        J['windLoads.qdyn', 'd'] = zeron
+
+        J['windLoads.z', 'U'] = zeron
+        J['windLoads.z', 'z'] = np.eye(n) 
+        J['windLoads.z', 'd'] = zeron        
 
         return J
 
@@ -343,7 +366,7 @@ class TowerWaveDrag(Component):
 
         # Reynolds number and drag
         if params['cd_usr']:
-            cd = sparams['cd_usr']*np.ones_like(d)
+            cd = params['cd_usr']*np.ones_like(d)
             Re = 1.0
             dcd_dRe = 0.0
         else:
@@ -351,7 +374,7 @@ class TowerWaveDrag(Component):
             cd, dcd_dRe = cylinderDrag(Re)
 
         # inertial and drag forces
-        Fi = rho*self.cm*math.pi/4.0*d**2*params['A']  # Morrison's equation
+        Fi = rho*params['cm']*math.pi/4.0*d**2*params['A']  # Morrison's equation
         Fd = q*cd*d
         Fp = Fi + Fd
 
@@ -394,22 +417,7 @@ class TowerWaveDrag(Component):
         unknowns['waveLoads'].beta = beta
         unknowns['waveLoads'].d = d
 
-        #TODO still need to do derivatives
-        # derivatives
-        self.dq_dU = rho*U
-        const = (self.dq_dU*cd + q*dcd_dRe*rho*d/mu)*d
-        self.dPx_dU = const*cosd(beta)
-        self.dPy_dU = const*sind(beta)
-
-        const = (cd + dcd_dRe*Re)*q + rho*self.cm*math.pi/4.0*2*d*self.A
-        self.dPx_dd = const*cosd(beta)
-        self.dPy_dd = const*sind(beta)
-
-        const = rho*self.cm*math.pi/4.0*d**2
-        self.dPx_dA = const*cosd(beta)
-        self.dPy_dA = const*sind(beta)
-
-
+        
     def list_deriv_vars(self):
 
         inputs = ('U', 'A', 'z', 'd')
@@ -420,17 +428,72 @@ class TowerWaveDrag(Component):
 
     def provideJ(self):
 
-        n = len(self.z)
+        rho = params['rho']
+        U = params['U']
+        U0 = params['U0']
+        d = params['d']
+        zrel= params['z']-params['wlevel']
+        mu = params['mu']
+        beta = params['beta']
+        beta0 = params['beta0']
+
+        # dynamic pressure
+        q = 0.5*rho*U**2
+        q0= 0.5*rho*U0**2
+
+        # Reynolds number and drag
+        if params['cd_usr']:
+            cd = params['cd_usr']*np.ones_like(d)
+            Re = 1.0
+            dcd_dRe = 0.0
+        else:
+            Re = rho*U*d/mu
+            cd, dcd_dRe = cylinderDrag(Re)
+
+        # derivatives
+        dq_dU = rho*U
+        const = (dq_dU*cd + q*dcd_dRe*rho*d/mu)*d
+        dPx_dU = const*cosd(beta)
+        dPy_dU = const*sind(beta)
+
+        const = (cd + dcd_dRe*Re)*q + rho*params['cm']*math.pi/4.0*2*d*params['A']
+        dPx_dd = const*cosd(beta)
+        dPy_dd = const*sind(beta)
+
+        const = rho*params['cm']*math.pi/4.0*d**2
+        dPx_dA = const*cosd(beta)
+        dPy_dA = const*sind(beta)
+
+        n = len(params['z'])
 
         zeron = np.zeros((n, n))
 
-        dPx = np.hstack([np.diag(self.dPx_dU), np.diag(self.dPx_dA), zeron, np.diag(self.dPx_dd)])
-        dPy = np.hstack([np.diag(self.dPy_dU), np.diag(self.dPy_dA), zeron, np.diag(self.dPy_dd)])
-        dPz = np.zeros((n, 4*n))
-        dq = np.hstack([np.diag(self.dq_dU), np.zeros((n, 3*n))])
-        dz = np.hstack([zeron, zeron, np.eye(n), zeron])
+      
+        J = {}
+        J['waveLoads.Px', 'U'] = np.diag(dPx_dU)
+        J['waveLoads.Px', 'A'] = np.diag(dPx_dA)
+        J['waveLoads.Px', 'z'] = zeron 
+        J['waveLoads.Px', 'd'] = np.diag(dPx_dd)
+ 
+        J['waveLoads.Py', 'U'] = np.diag(dPy_dU)
+        J['waveLoads.Py', 'A'] = np.diag(dPy_dA)
+        J['waveLoads.Py', 'z'] = zeron 
+        J['waveLoads.Py', 'd'] = np.diag(dPy_dd)
 
-        J = np.vstack([dPx, dPy, dPz, dq, dz, np.zeros((n, 4*n))])  # TODO: remove these zeros after OpenMDAO bug fix (don't need waveLoads.beta)
+        J['waveLoads.Pz', 'U'] = zeron 
+        J['waveLoads.Pz', 'A'] = zeron 
+        J['waveLoads.Pz', 'z'] = zeron 
+        J['waveLoads.Pz', 'd'] = zeron 
+        
+        J['waveLoads.qdyn', 'U'] = np.diag(dq_dU)
+        J['waveLoads.qdyn', 'A'] = zeron
+        J['waveLoads.qdyn', 'z'] = zeron 
+        J['waveLoads.qdyn', 'd'] = zeron        
+
+        J['waveLoads.z', 'U'] = zeron
+        J['waveLoads.z', 'A'] = zeron
+        J['waveLoads.z', 'z'] = np.eye(n) 
+        J['waveLoads.z', 'd'] = zeron
 
         return J
 
