@@ -5,6 +5,7 @@ from commonse.utilities import hstack, vstack
 from commonse.csystem import DirectionVector
 
 #TODO NEED TO DO THE JACOBIANS
+#TODO Done with RNAMass
 
 
 class RNAMass(Component):
@@ -16,11 +17,9 @@ class RNAMass(Component):
         self.add_param('hub_mass', 0.0, units='kg', desc='mass of hub')
         self.add_param('nac_mass', 0.0, units='kg', desc='mass of nacelle')
 
-        #TODO is this right? an array of 3, (x,y,z)?
         self.add_param('hub_cm', np.zeros(3), units='m', desc='location of hub center of mass relative to tower top in yaw-aligned c.s.')
         self.add_param('nac_cm', np.zeros(3), units='m', desc='location of nacelle center of mass relative to tower top in yaw-aligned c.s.')
 
-        # TODO: check on this???
         # order for all moments of inertia is (xx, yy, zz, xy, xz, yz) in the yaw-aligned coorinate system
         self.add_param('blades_I', np.zeros(6), units='kg*m**2', desc='mass moments of inertia of all blades about hub center')
         self.add_param('hub_I', np.zeros(6), units='kg*m**2', desc='mass moments of inertia of hub about its center of mass')
@@ -68,56 +67,66 @@ class RNAMass(Component):
         unknowns['rna_I_TT'] = self._unassembleI(rotor_I_TT + nac_I_TT)
 
 
-    def list_deriv_vars(self):
+    def linearize(self, params, unknowns, resids):
+        
+        blades_mass = params['blades_mass']
+        hub_mass = params['hub_mass']
+        nac_mass = params['nac_mass']
+        hub_cm = params['hub_cm']
+        nac_cm = params['nac_cm']
+        hub_I = params['hub_I']
+        nac_I = params['nac_I']
+        rna_mass = unknowns['rna_mass']
+        rotor_mass = blades_mass+hub_mass
 
-        inputs = ('blades_mass', 'hub_mass', 'nac_mass', 'hub_cm', 'nac_cm', 'blades_I', 'hub_I', 'nac_I')
-        outputs = ('rna_mass', 'rna_cm', 'rna_I_TT')
-
-        return inputs, outputs
-
-
-    def provideJ(self):
+        J = {}
 
         # mass
-        dmass = np.hstack([np.array([1.0, 1.0, 1.0]), np.zeros(2*3+3*6)])
+        J['rna_mass', 'blades_mass'] = 1.0
+        J['rna_mass', 'hub_mass'] = 1.0
+        J['rna_mass', 'nac_mass'] = 1.0
+        J['rna_mass', 'hub_cm'] = np.zeros(3)
+        J['rna_mass', 'nac_cm'] = np.zeros(3)
+        J['rna_mass', 'blades_I'] = np.zeros(6)
+        J['rna_mass', 'hub_I'] = np.zeros(6)
+        J['rna_mass', 'nac_I'] = np.zeros(6)
 
+        
         # cm
-        top = (self.rotor_mass*self.hub_cm + self.nac_mass*self.nac_cm)
-        dcm_dblademass = (self.rna_mass*self.hub_cm - top)/self.rna_mass**2
-        dcm_dhubmass = (self.rna_mass*self.hub_cm - top)/self.rna_mass**2
-        dcm_dnacmass = (self.rna_mass*self.nac_cm - top)/self.rna_mass**2
-        dcm_dhubcm = self.rotor_mass/self.rna_mass*np.eye(3)
-        dcm_dnaccm = self.nac_mass/self.rna_mass*np.eye(3)
+        numerator = (blades_mass+hub_mass)*hub_cm+nac_mass*nac_cm
 
-        dcm = hstack([dcm_dblademass, dcm_dhubmass, dcm_dnacmass, dcm_dhubcm,
-            dcm_dnaccm, np.zeros((3, 3*6))])
+        J['rna_cm', 'blades_mass'] = (rna_mass*hub_cm-numerator)/rna_mass**2
+        J['rna_cm', 'hub_mass'] = (rna_mass*hub_cm-numerator)/rna_mass**2
+        J['rna_cm', 'nac_mass'] = (rna_mass*nac_cm-numerator)/rna_mass**2
+        J['rna_cm', 'hub_cm'] = rotor_mass/rna_mass*np.eye(3)
+        J['rna_cm', 'nac_cm'] = nac_mass/rna_mass*np.eye(3)
+        J['rna_cm', 'blades_I'] = np.zeros(3, 6)
+        J['rna_cm', 'hub_I'] = np.zeros(3, 6)
+        J['rna_cm', 'nac_I'] = np.zeros(3, 6)
+
 
         # I
-        R = self.hub_cm
+        R = hub_cm
         const = self._unassembleI(np.dot(R, R)*np.eye(3) - np.outer(R, R))
-        dI_dblademass = const
-        dI_dhubmass = const
-        dI_drx = self.rotor_mass*self._unassembleI(2*R[0]*np.eye(3) - np.array([[2*R[0], R[1], R[2]], [R[1], 0.0, 0.0], [R[2], 0.0, 0.0]]))
-        dI_dry = self.rotor_mass*self._unassembleI(2*R[1]*np.eye(3) - np.array([[0.0, R[0], 0.0], [R[0], 2*R[1], R[2]], [0.0, R[2], 0.0]]))
-        dI_drz = self.rotor_mass*self._unassembleI(2*R[2]*np.eye(3) - np.array([[0.0, 0.0, R[0]], [0.0, 0.0, R[1]], [R[0], R[1], 2*R[2]]]))
-        dI_dhubcm = np.vstack([dI_drx, dI_dry, dI_drz]).T
 
-        R = self.nac_cm
+        J['rna_I', 'blades_mass'] = const
+        J['rna_I', 'hub_mass'] = const
+        dI_drx = rotor_mass*self._unassembleI(2*R[0]*np.eye(3) - np.array([[2*R[0], R[1], R[2]], [R[1], 0.0, 0.0], [R[2], 0.0, 0.0]]))
+        dI_dry = rotor_mass*self._unassembleI(2*R[1]*np.eye(3) - np.array([[0.0, R[0], 0.0], [R[0], 2*R[1], R[2]], [0.0, R[2], 0.0]]))
+        dI_drz = rotor_mass*self._unassembleI(2*R[2]*np.eye(3) - np.array([[0.0, 0.0, R[0]], [0.0, 0.0, R[1]], [R[0], R[1], 2*R[2]]]))
+        J['rna_I', 'hub_cm'] = np.vstack([dI_drx, dI_dry, dI_drz]).T
+
+        R = nac_cm
         const = self._unassembleI(np.dot(R, R)*np.eye(3) - np.outer(R, R))
-        dI_dnacmass = const
-        dI_drx = self.nac_mass*self._unassembleI(2*R[0]*np.eye(3) - np.array([[2*R[0], R[1], R[2]], [R[1], 0.0, 0.0], [R[2], 0.0, 0.0]]))
-        dI_dry = self.nac_mass*self._unassembleI(2*R[1]*np.eye(3) - np.array([[0.0, R[0], 0.0], [R[0], 2*R[1], R[2]], [0.0, R[2], 0.0]]))
-        dI_drz = self.nac_mass*self._unassembleI(2*R[2]*np.eye(3) - np.array([[0.0, 0.0, R[0]], [0.0, 0.0, R[1]], [R[0], R[1], 2*R[2]]]))
-        dI_dnaccm = np.vstack([dI_drx, dI_dry, dI_drz]).T
+        J['rna_I', 'nac_mass'] = const
+        dI_drx = nac_mass*self._unassembleI(2*R[0]*np.eye(3) - np.array([[2*R[0], R[1], R[2]], [R[1], 0.0, 0.0], [R[2], 0.0, 0.0]]))
+        dI_dry = nac_mass*self._unassembleI(2*R[1]*np.eye(3) - np.array([[0.0, R[0], 0.0], [R[0], 2*R[1], R[2]], [0.0, R[2], 0.0]]))
+        dI_drz = nac_mass*self._unassembleI(2*R[2]*np.eye(3) - np.array([[0.0, 0.0, R[0]], [0.0, 0.0, R[1]], [R[0], R[1], 2*R[2]]]))
+        J['rna_I', 'nac_cm'] = np.vstack([dI_drx, dI_dry, dI_drz]).T
 
-        dI_dbladeI = np.eye(6)
-        dI_dhubI = np.eye(6)
-        dI_dnacI = np.eye(6)
-
-        dI = hstack([dI_dblademass, dI_dhubmass, dI_dnacmass, dI_dhubcm, dI_dnaccm,
-            dI_dbladeI, dI_dhubI, dI_dnacI])
-
-        J = np.vstack([dmass, dcm, dI])
+        J['rna_I', 'blades_I'] = np.eye(6)
+        J['rna_I', 'hub_I'] = np.eye(6)
+        J['rna_I', 'nac_I'] = np.eye(6)
 
         return J
 
