@@ -417,16 +417,8 @@ class TowerWaveDrag(Component):
         unknowns['waveLoads:beta'] = beta
         unknowns['waveLoads:d'] = d
 
-        
-    def list_deriv_vars(self):
 
-        inputs = ('U', 'A', 'z', 'd')
-        outputs = ('waveLoads.Px', 'waveLoads.Py', 'waveLoads.Pz', 'waveLoads.qdyn', 'waveLoads.z', 'waveLoads.beta')
-
-        return inputs, outputs
-
-
-    def provideJ(self):
+    def linearize(self, params, unknowns, resids):
 
         rho = params['rho']
         U = params['U']
