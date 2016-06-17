@@ -14,7 +14,7 @@ from openmdao.api import Component, Problem, Group
 
 from utilities import hstack, vstack
 
-#TODO NOT DONE. Finish and do all the Jacobians
+#TODO CHECK
 
 # -----------------
 #  Base Components
@@ -97,9 +97,9 @@ class PowerWind(WindBase):
     """power-law profile wind.  any nodes must not cross z0, and if a node is at z0
     it must stay at that point.  otherwise gradients crossing the boundary will be wrong."""
 
-    def __init__(self):
+    def __init__(self, nPoints):
 
-        super(PowerWind, self).__init__()
+        super(PowerWind, self).__init__(nPoints)
 
         # parameters
         self.add_param('shearExp', 0.2, desc='shear exponent')
@@ -184,7 +184,7 @@ class LogWind(WindBase):
 
     def __init__(self, nPoints):
 
-        super(LogWind, self).__init__()
+        super(LogWind, self).__init__(nPoints)
 
         # parameters
         self.add_param('z_roughness', 10.0, units='mm', desc='surface roughness length')
@@ -240,9 +240,9 @@ class LogWind(WindBase):
 class LinearWaves(WaveBase):
     """linear (Airy) wave theory"""
 
-    def __init__(self):
+    def __init__(self, nPoints):
 
-        super(LinearWaves, self).__init__()
+        super(LinearWaves, self).__init__(nPoints)
 
         # variables
         self.add_param('Uc', 0.0, units='m/s', desc='mean current speed')
@@ -336,7 +336,7 @@ class TowerSoilK(SoilBase):
 
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['k'] = params['kin']
-        params['k'][params['rigid']] = float('inf') #TODO ??????
+        params['k'][params['rigid']] = float('inf') 
 
 class TowerSoil(SoilBase):
     """textbook soil stiffness method"""
@@ -440,24 +440,61 @@ class TowerSoil(SoilBase):
 
 
 if __name__ == '__main__':
-    #TODO need to fix this
-    z = np.linspace(1.0, 5, 20)
+
+    z = np.linspace(1.0, 5, 100)
     nPoints = len(z)
 
-    prob = Problem(root=LogWind(nPoints))
+    prob = Problem()
+    
+    root = prob.root = Group()
+    root.add('p1', PowerWind(nPoints))
 
     prob.setup()
 
-    p = LogWind()
-    p.Uref = 10.0
-    p.zref = 100.0
-    p.z0 = 1.0
+    prob['p1.z'] = z
+    prob['p1.Uref'] = 10.0
+    prob['p1.zref'] = 100.0
+    prob['p1.z0'] = 1.0
     
-    p.shearExp = 0.2
-    p.betaWind = 0.0
+    prob['p1.shearExp'] = 0.2
+    prob['p1.betaWind'] = 0.0
 
-    p.run()
+    prob.run()
+
+    print prob['p1.z']
 
     import matplotlib.pyplot as plt
-    plt.plot(p.z, p.U)
+    plt.figure(1)
+    plt.plot(prob['p1.z'], prob['p1.U'], label='Power')
+
+
+
+
+    z = np.linspace(1.0, 5, 100)
+    nPoints = len(z)
+
+    prob = Problem()
+    
+    root = prob.root = Group()
+    root.add('p1', LogWind(nPoints))
+
+    prob.setup()
+
+    prob['p1.z'] = z
+    prob['p1.Uref'] = 10.0
+    prob['p1.zref'] = 100.0
+    prob['p1.z0'] = 1.0
+    
+    #prob['p1.shearExp'] = 0.2
+    prob['p1.betaWind'] = 0.0
+
+    prob.run()
+
+    print prob['p1.z']
+
+    import matplotlib.pyplot as plt
+    plt.plot(prob['p1.z'], prob['p1.U'], label='Log')
+    plt.legend()
     plt.show()
+
+
