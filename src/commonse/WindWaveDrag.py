@@ -22,13 +22,13 @@ Copyright (c) NREL. All rights reserved.
 import math
 import numpy as np
 
-from openmdao.api import Component
+from openmdao.api import Component, Problem, Group
 from commonse.utilities import sind, cosd  # , linspace_with_deriv, interp_with_deriv, hstack, vstack
 from commonse.csystem import DirectionVector
 
 from akima import Akima
 
-#TODO still need to do derivatives
+#TODO CHECK
 
 # -----------------
 #  Helper Functions
@@ -241,12 +241,12 @@ class TowerWindDrag(Component):
         Pz = 0*Fp
 
         # pack data
-        unknowns['windLoads'].Px = Px
-        unknowns['windLoads'].Py = Py
-        unknowns['windLoads'].Pz = Pz
-        unknowns['windLoads'].qdyn = q
-        unknowns['windLoads'].z = self.z
-        unknowns['windLoads'].beta = beta
+        unknowns['windLoads:Px'] = Px
+        unknowns['windLoads:Py'] = Py
+        unknowns['windLoads:Pz'] = Pz
+        unknowns['windLoads:qdyn'] = q
+        unknowns['windLoads:z'] = params['z']
+        unknowns['windLoads:beta'] = beta
 
 
     def linearize(self, params, unknowns, resids):
@@ -402,20 +402,20 @@ class TowerWaveDrag(Component):
         Pz0 = 0.*Fp0
 
         #Store qties at z=0 MSL
-        unknowns['waveLoads'].Px0 = Px0
-        unknowns['waveLoads'].Py0 = Py0
-        unknowns['waveLoads'].Pz0 = Pz0
-        unknowns['waveLoads'].qdyn0 = q0
-        unknowns['waveLoads'].beta0 = beta0
+        unknowns['waveLoads:Px0'] = Px0
+        unknowns['waveLoads:Py0'] = Py0
+        unknowns['waveLoads:Pz0'] = Pz0
+        unknowns['waveLoads:qdyn0'] = q0
+        unknowns['waveLoads:beta0'] = beta0
 
         # pack data
-        unknowns['waveLoads'].Px = Px
-        unknowns['waveLoads'].Py = Py
-        unknowns['waveLoads'].Pz = Pz
-        unknowns['waveLoads'].qdyn = q
-        unknowns['waveLoads'].z = self.z
-        unknowns['waveLoads'].beta = beta
-        unknowns['waveLoads'].d = d
+        unknowns['waveLoads:Px'] = Px
+        unknowns['waveLoads:Py'] = Py
+        unknowns['waveLoads:Pz'] = Pz
+        unknowns['waveLoads:qdyn'] = q
+        unknowns['waveLoads:z'] = self.z
+        unknowns['waveLoads:beta'] = beta
+        unknowns['waveLoads:d'] = d
 
         
     def list_deriv_vars(self):
@@ -500,24 +500,44 @@ class TowerWaveDrag(Component):
 #___________________________________________#
 
 def main():
-    load=TowerWindDrag()
-    load.U = np.array([20., 25., 30.])
-    load.z = np.array([10., 30., 80.])
-    load.d = np.array([5.5, 4., 3.])
+    # initialize problem
+    U = np.array([20., 25., 30.])
+    z = np.array([10., 30., 80.])
+    d = np.array([5.5, 4., 3.])
 
-    load.beta = np.array([45., 45., 45.])
-    load.rho = 1.225
-    load.mu = 1.7934e-5
-    load.cd_usr = 0.7
+    beta = np.array([45., 45., 45.])
+    rho = 1.225
+    mu = 1.7934e-5
+    cd_usr = 0.7
+
+    nPoints = len(z)
+
+
+    prob = Problem()
+    
+    root = prob.root = Group()
+
+    root.add('p1', TowerWindDrag(nPoints))
+
+    prob.setup()
+
+    prob['p1.U'] = U
+    prob['p1.z'] = z
+    prob['p1.d'] = d
+    prob['p1.beta'] = beta
+    prob['p1.rho'] = rho
+    prob['p1.mu'] = mu
+    prob['p1.cd_usr'] = cd_usr
 
     #run
-    load.run()
+    prob.run()
 
     # out
     import matplotlib.pyplot as plt
-    plt.plot(load.windLoads.Px, load.windLoads.z)
-    plt.plot(load.windLoads.Py, load.windLoads.z)
-    plt.plot(load.windLoads.qdyn, load.windLoads.z)
+    
+    plt.plot(prob['p1.windLoads:Px'], prob['p1.windLoads:z'])
+    plt.plot(prob['p1.windLoads:Py'], prob['p1.windLoads:z'])
+    plt.plot(prob['p1.windLoads:qdyn'], prob['p1.windLoads:z'])
     plt.show()
 
 if __name__ == '__main__':
