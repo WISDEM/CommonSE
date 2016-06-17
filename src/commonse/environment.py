@@ -10,7 +10,7 @@ Copyright (c) NREL. All rights reserved.
 import math
 import numpy as np
 from scipy.optimize import brentq
-from openmdao.api import Component
+from openmdao.api import Component, Problem, Group
 
 from utilities import hstack, vstack
 
@@ -182,7 +182,7 @@ class PowerWind(WindBase):
 class LogWind(WindBase):
     """logarithmic-profile wind"""
 
-    def __init__(self):
+    def __init__(self, nPoints):
 
         super(LogWind, self).__init__()
 
@@ -388,12 +388,12 @@ class TowerSoil(SoilBase):
         return inputs, outputs
 
 
-    def provideJ(self):
+    def linearize(self, params, unknowns, resids):
 
-        G = self.G
-        nu = self.nu
-        h = self.depth
-        r0 = self.r0
+        G = params['G']
+        nu = params['nu']
+        h = params['depth']
+        r0 = params['r0']
 
         # vertical
         eta = 1.0 + 0.6*(1.0-nu)*h/r0
@@ -424,11 +424,13 @@ class TowerSoil(SoilBase):
         dkphi_dh = 0.0
 
         dk_dr0 = np.array([dkx_dr0, dkthetax_dr0, dkx_dr0, dkthetax_dr0, dkz_dr0, dkphi_dr0])
-        dk_dr0[self.rigid] = 0.0
+        dk_dr0[params['rigid']] = 0.0
         dk_dh = np.array([dkx_dh, dkthetax_dh, dkx_dh, dkthetax_dh, dkz_dh, dkphi_dh])
-        dk_dh[self.rigid] = 0.0
+        dk_dh[params['rigid']] = 0.0
 
-        J = hstack((dk_dr0, dk_dh))
+        J = {}
+        J['k', 'r0'] = dk_dr0
+        J['k', 'depth'] = dk_dh
 
         return J
 
@@ -438,11 +440,19 @@ class TowerSoil(SoilBase):
 
 
 if __name__ == '__main__':
+    #TODO need to fix this
+    z = np.linspace(1.0, 5, 20)
+    nPoints = len(z)
+
+    prob = Problem(root=LogWind(nPoints))
+
+    prob.setup()
+
     p = LogWind()
     p.Uref = 10.0
     p.zref = 100.0
     p.z0 = 1.0
-    p.z = np.linspace(1.0, 5, 20)
+    
     p.shearExp = 0.2
     p.betaWind = 0.0
 
