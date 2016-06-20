@@ -130,7 +130,7 @@ class AeroHydroLoads(Component):
         self.add_param('waveLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
 
 
-        self.add_param('z', np.zeros(nPoints), desc='locations along tower')
+        self.add_param('z', np.zeros(nPoints), units='m', desc='locations along tower')
         self.add_param('yaw', 0.0, units='deg', desc='yaw angle')
 
 
@@ -156,27 +156,27 @@ class AeroHydroLoads(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
         # aero/hydro loads
-        wind = params['windLoads']
-        wave = params['waveLoads']
-        outloads = params['outloads']
+        # wind = params['windLoads']
+        # wave = params['waveLoads']
+        # outloads = params['outloads']
         z = params['z']
         hubHt = z[-1]  # top of tower
-        betaMain = np.interp(hubHt, z, wind.beta)  # wind coordinate system defined relative to hub height
-        windLoads = DirectionVector(wind.Px, wind.Py, wind.Pz).inertialToWind(betaMain).windToYaw(params['yaw'])
-        waveLoads = DirectionVector(wave.Px, wave.Py, wave.Pz).inertialToWind(betaMain).windToYaw(params['yaw'])
+        betaMain = np.interp(hubHt, z, params['windLoads:beta'])  # wind coordinate system defined relative to hub height
+        windLoads = DirectionVector(params['windLoads:Px'], params['windLoads:Py'], params['windLoads:Pz']).inertialToWind(betaMain).windToYaw(params['yaw'])
+        waveLoads = DirectionVector(params['waveLoads:Px'], params['waveLoads:Py'], params['waveLoads:Pz']).inertialToWind(betaMain).windToYaw(params['yaw'])
 
-        outloads.Px = np.interp(z, wind.z, windLoads.x) + np.interp(z, wave.z, waveLoads.x)
-        outloads.Py = np.interp(z, wind.z, windLoads.y) + np.interp(z, wave.z, waveLoads.y)
-        outloads.Pz = np.interp(z, wind.z, windLoads.z) + np.interp(z, wave.z, waveLoads.z)
-        outloads.qdyn = np.interp(z, wind.z, wind.qdyn) + np.interp(z, wave.z, wave.qdyn)
-        outloads.z = z
+        Px = np.interp(z, params['windLoads:z'], windLoads.x) + np.interp(z, params['waveLoads:z'], waveLoads.x)
+        Py = np.interp(z, params['windLoads:z'], windLoads.y) + np.interp(z, params['waveLoads:z'], waveLoads.y)
+        Pz = np.interp(z, params['windLoads:z'], windLoads.z) + np.interp(z, params['waveLoads:z'], waveLoads.z)
+        qdyn = np.interp(z, params['windLoads:z'], params['windLoads:qdyn']) + np.interp(z, params['waveLoads:z'], params['waveLoads:qdyn'])
+        # outloads.z = z
 
 
         #The following are redundant, at one point we will consolidate them to something that works for both tower (not using vartrees) and jacket (still using vartrees)
-        unknowns['Px'] = outloads.Px
-        unknowns['Py'] = outloads.Py
-        unknowns['Pz'] = outloads.Pz
-        unknowns['qdyn'] = outloads.qdyn
+        unknowns['Px'] = Px
+        unknowns['Py'] = Py
+        unknowns['Pz'] = Pz
+        unknowns['qdyn'] = qdyn
 
 # -----------------
 
@@ -413,7 +413,7 @@ class TowerWaveDrag(Component):
         unknowns['waveLoads:Py'] = Py
         unknowns['waveLoads:Pz'] = Pz
         unknowns['waveLoads:qdyn'] = q
-        unknowns['waveLoads:z'] = self.z
+        unknowns['waveLoads:z'] = params['z']
         unknowns['waveLoads:beta'] = beta
         unknowns['waveLoads:d'] = d
 
