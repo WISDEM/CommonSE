@@ -10,7 +10,8 @@ Copyright (c) NREL. All rights reserved.
 import math
 import numpy as np
 from scipy.optimize import brentq
-from openmdao.api import Component, Problem, Group
+from openmdao.api import Component, Problem, Group, IndepVarComp
+import sys
 
 from utilities import hstack, vstack
 
@@ -461,7 +462,10 @@ if __name__ == '__main__':
 
     prob.run()
 
-    print prob['p1.z']
+    J = prob.check_total_derivatives(out_stream=None)
+    print J
+
+    #print prob['p1.z']
 
     import matplotlib.pyplot as plt
     plt.figure(1)
@@ -477,20 +481,25 @@ if __name__ == '__main__':
     
     root = prob.root = Group()
     root.add('p1', LogWind(nPoints))
+    root.add('p',IndepVarComp('zref',100.0))
+
+    root.connect('p1.zref', 'p.zref')
 
     prob.setup()
 
     prob['p1.z'] = z
     prob['p1.Uref'] = 10.0
-    prob['p1.zref'] = 100.0
+    #prob['p1.zref'] = 100.0
     prob['p1.z0'] = 1.0
     
     #prob['p1.shearExp'] = 0.2
     prob['p1.betaWind'] = 0.0
 
     prob.run()
+    Jlog = prob.check_total_derivatives(out_stream=None)
+    print Jlog
 
-    print prob['p1.z']
+    #print prob['p1.z']
 
     import matplotlib.pyplot as plt
     plt.plot(prob['p1.z'], prob['p1.U'], label='Log')

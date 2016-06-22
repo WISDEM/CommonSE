@@ -12,6 +12,9 @@ import unittest
 import numpy as np
 from commonse.utilities import check_gradient
 from commonse.environment import PowerWind, LogWind, LinearWaves, TowerSoil
+from openmdao.api import pyOptSparseDriver, Problem, Group
+import sys
+from openmdao.api import ScipyOptimizer, IndepVarComp
 
 
 class TestPowerWind(unittest.TestCase):
@@ -19,14 +22,41 @@ class TestPowerWind(unittest.TestCase):
 
     def test1(self):
 
-        pw = PowerWind()
-        pw.Uref = 10.0
-        pw.zref = 100.0
-        pw.z0 = 0.0
-        pw.z = np.linspace(0.0, 100.0, 20)
-        pw.shearExp = 0.2
-        pw.betaWind = 0.0
+        z = np.linspace(0.0, 100.0, 20)
+        nPoints = len(z)
+        Uref = 10.0
+        zref = 100.0
+        z0 = 0.0
+        shearExp = 0.2
+        betaWind = 0.0
 
+        prob = prob = Problem(root=PowerWind(nPoints))
+        prob.root.add('p1', IndepVarComp('Uref', 5.0))
+        
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+
+        prob.driver.add_desvar('p1.Uref', lower=0, upper=25.0)
+        prob.driver.add_objective('p.U')
+
+        prob.setup()
+        
+        prob['p.z'] = z
+        prob['p.zref'] = zref
+        prob['p.z0'] = z0
+        prob['p.shearExp'] = shearExp
+        prob['p.betaWind'] = betaWind
+
+        prob.run()
+
+        data = prob.check_total_derivatives(out_stream=sys.stdout)
+
+        print prob['p1.Uref']
+        print prob['p.U']
+
+        
+
+        """
         names, errors = check_gradient(pw)
 
         tol = 1e-6
@@ -40,7 +70,7 @@ class TestPowerWind(unittest.TestCase):
             except AssertionError, e:
                 print '*** error in:', name
                 raise e
-
+        """
 
 
     def test2(self):
