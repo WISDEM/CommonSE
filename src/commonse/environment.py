@@ -160,7 +160,7 @@ class PowerWind(WindBase):
         J['U', 'z'] = np.diag(dU_dz)
         J['U', 'zref'] = dU_dzref
         #TODO still missing several partials? This is what was in the original code though...
-        
+
         # # cubic spline region
         # idx = np.logical_and(z > z0, z < zsmall)
 
@@ -294,7 +294,7 @@ class LinearWaves(WaveBase):
         h = params['hmax']
         omega = 2.0*math.pi/params['T']
         k = brentq(lambda k: omega**2 - params['g']*k*math.tanh(d*k), 0, 10*omega**2/params['g'])
-        z_rel = z - params['z_surface']        
+        z_rel = z - params['z_surface']
 
         # derivatives
         dU_dz = h/2.0*omega*np.sinh(k*(z_rel + d))/math.sinh(k*d)*k
@@ -318,7 +318,7 @@ class LinearWaves(WaveBase):
         J['U0', 'Uc'] = 0.0 #TODO is this zero? or one?
         J['A0', 'z'] = np.transpose(dA0)
         J['A0', 'Uc'] = 0.0 #TODO is this zero?
-        
+
         return J
 
 class TowerSoilK(SoilBase):
@@ -337,7 +337,7 @@ class TowerSoilK(SoilBase):
 
     def solve_nonlinear(self, params, unknowns, resids):
         unknowns['k'] = params['kin']
-        params['k'][params['rigid']] = float('inf') 
+        params['k'][params['rigid']] = float('inf')
 
 class TowerSoil(SoilBase):
     """textbook soil stiffness method"""
@@ -446,7 +446,7 @@ if __name__ == '__main__':
     nPoints = len(z)
 
     prob = Problem()
-    
+
     root = prob.root = Group()
     root.add('p1', PowerWind(nPoints))
 
@@ -456,7 +456,7 @@ if __name__ == '__main__':
     prob['p1.Uref'] = 10.0
     prob['p1.zref'] = 100.0
     prob['p1.z0'] = 1.0
-    
+
     prob['p1.shearExp'] = 0.2
     prob['p1.betaWind'] = 0.0
 
@@ -478,26 +478,26 @@ if __name__ == '__main__':
     nPoints = len(z)
 
     prob = Problem()
-    
+
     root = prob.root = Group()
     root.add('p1', LogWind(nPoints))
-    root.add('p',IndepVarComp('zref',100.0))
+    #root.add('p',IndepVarComp('zref',100.0))
 
-    root.connect('p1.zref', 'p.zref')
+    #root.connect('p1.zref', 'p.zref')
 
     prob.setup()
 
     prob['p1.z'] = z
     prob['p1.Uref'] = 10.0
-    #prob['p1.zref'] = 100.0
+    prob['p1.zref'] = 100.0
     prob['p1.z0'] = 1.0
-    
+
     #prob['p1.shearExp'] = 0.2
     prob['p1.betaWind'] = 0.0
 
     prob.run()
-    Jlog = prob.check_total_derivatives(out_stream=None)
-    print Jlog
+    #Jlog = prob.check_total_derivatives(out_stream=None)
+    #print Jlog
 
     #print prob['p1.z']
 
@@ -505,5 +505,3 @@ if __name__ == '__main__':
     plt.plot(prob['p1.z'], prob['p1.U'], label='Log')
     plt.legend()
     plt.show()
-
-

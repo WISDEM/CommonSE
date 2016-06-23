@@ -182,7 +182,7 @@ class AeroHydroLoads(Component):
 
 class TowerWindDrag(Component):
     """drag forces on a cylindrical tower due to wind"""
-    
+
     def __init__(self, nPoints):
 
         super(TowerWindDrag, self).__init__()
@@ -197,7 +197,7 @@ class TowerWindDrag(Component):
         self.add_param('rho', 1.225, units='kg/m**3', desc='air density')
         self.add_param('mu', 1.7934e-5, units='kg/(m*s)', desc='dynamic viscosity of air')
         #TODO not sure what to do here?
-        self.add_param('cd_usr', 0.0, desc='User input drag coefficient to override Reynolds number based one')
+        self.add_param('cd_usr', 0.7, desc='User input drag coefficient to override Reynolds number based one')
 
         # out
         self.add_output('windLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
@@ -212,7 +212,7 @@ class TowerWindDrag(Component):
         self.add_output('windLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
         self.add_output('windLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
         self.add_output('windLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
-            
+
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -260,7 +260,7 @@ class TowerWindDrag(Component):
 
         # dynamic pressure
         q = 0.5*rho*U**2
-        
+
         # Reynolds number and drag
         if params['cd_usr']:
             cd = params['cd_usr']
@@ -283,18 +283,18 @@ class TowerWindDrag(Component):
         n = len(params['z'])
 
         zeron = np.zeros((n, n))
-        
+
         J = {}
         J['windLoads.Px', 'U'] = np.diag(dPx_dU)
-        J['windLoads.Px', 'z'] = zeron 
+        J['windLoads.Px', 'z'] = zeron
         J['windLoads.Px', 'd'] = np.diag(dPx_dd)
- 
+
         J['windLoads.Py', 'U'] = np.diag(dPy_dU)
         J['windLoads.Py', 'z'] = zeron
         J['windLoads.Py', 'd'] = np.diag(dPy_dd)
 
         J['windLoads.Pz', 'U'] = zeron
-        J['windLoads.Pz', 'z'] = zeron 
+        J['windLoads.Pz', 'z'] = zeron
         J['windLoads.Pz', 'd'] = zeron
 
         J['windLoads.qdyn', 'U'] = np.diag(dq_dU)
@@ -302,8 +302,8 @@ class TowerWindDrag(Component):
         J['windLoads.qdyn', 'd'] = zeron
 
         J['windLoads.z', 'U'] = zeron
-        J['windLoads.z', 'z'] = np.eye(n) 
-        J['windLoads.z', 'd'] = zeron        
+        J['windLoads.z', 'z'] = np.eye(n)
+        J['windLoads.z', 'd'] = zeron
 
         return J
 
@@ -332,7 +332,7 @@ class TowerWaveDrag(Component):
         self.add_param('mu', 1.3351e-3, units='kg/(m*s)', desc='dynamic viscosity of water')
         self.add_param('cm', 2.0, desc='mass coefficient')
         #TODO not sure what to do here?
-        self.add_param('cd_usr', 0.0, desc='User input drag coefficient to override Reynolds number based one')
+        self.add_param('cd_usr', 0.7, desc='User input drag coefficient to override Reynolds number based one')
 
         # out
         self.add_output('waveLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
@@ -460,31 +460,31 @@ class TowerWaveDrag(Component):
 
         zeron = np.zeros((n, n))
 
-      
+
         J = {}
         J['waveLoads.Px', 'U'] = np.diag(dPx_dU)
         J['waveLoads.Px', 'A'] = np.diag(dPx_dA)
-        J['waveLoads.Px', 'z'] = zeron 
+        J['waveLoads.Px', 'z'] = zeron
         J['waveLoads.Px', 'd'] = np.diag(dPx_dd)
- 
+
         J['waveLoads.Py', 'U'] = np.diag(dPy_dU)
         J['waveLoads.Py', 'A'] = np.diag(dPy_dA)
-        J['waveLoads.Py', 'z'] = zeron 
+        J['waveLoads.Py', 'z'] = zeron
         J['waveLoads.Py', 'd'] = np.diag(dPy_dd)
 
-        J['waveLoads.Pz', 'U'] = zeron 
-        J['waveLoads.Pz', 'A'] = zeron 
-        J['waveLoads.Pz', 'z'] = zeron 
-        J['waveLoads.Pz', 'd'] = zeron 
-        
+        J['waveLoads.Pz', 'U'] = zeron
+        J['waveLoads.Pz', 'A'] = zeron
+        J['waveLoads.Pz', 'z'] = zeron
+        J['waveLoads.Pz', 'd'] = zeron
+
         J['waveLoads.qdyn', 'U'] = np.diag(dq_dU)
         J['waveLoads.qdyn', 'A'] = zeron
-        J['waveLoads.qdyn', 'z'] = zeron 
-        J['waveLoads.qdyn', 'd'] = zeron        
+        J['waveLoads.qdyn', 'z'] = zeron
+        J['waveLoads.qdyn', 'd'] = zeron
 
         J['waveLoads.z', 'U'] = zeron
         J['waveLoads.z', 'A'] = zeron
-        J['waveLoads.z', 'z'] = np.eye(n) 
+        J['waveLoads.z', 'z'] = np.eye(n)
         J['waveLoads.z', 'd'] = zeron
 
         return J
@@ -500,13 +500,13 @@ def main():
     beta = np.array([45., 45., 45.])
     rho = 1.225
     mu = 1.7934e-5
-    cd_usr = 0.7
+    #cd_usr = 0.7
 
     nPoints = len(z)
 
 
     prob = Problem()
-    
+
     root = prob.root = Group()
 
     root.add('p1', TowerWindDrag(nPoints))
@@ -519,14 +519,17 @@ def main():
     prob['p1.beta'] = beta
     prob['p1.rho'] = rho
     prob['p1.mu'] = mu
-    prob['p1.cd_usr'] = cd_usr
+    #prob['p1.cd_usr'] = cd_usr
 
     #run
     prob.run()
 
     # out
+    Re = prob['p1.rho']*prob['p1.U']*prob['p1.d']/prob['p1.mu']
+    cd, dcd_dRe = cylinderDrag(Re)
+    print cd
     import matplotlib.pyplot as plt
-    
+
     plt.plot(prob['p1.windLoads:Px'], prob['p1.windLoads:z'])
     plt.plot(prob['p1.windLoads:Py'], prob['p1.windLoads:z'])
     plt.plot(prob['p1.windLoads:qdyn'], prob['p1.windLoads:z'])
