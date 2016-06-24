@@ -172,6 +172,9 @@ class AeroHydroLoads(Component):
         # outloads.z = z
 
 
+        print "CommonSE Px (AeroHydroLoads): ", Px
+
+
         #The following are redundant, at one point we will consolidate them to something that works for both tower (not using vartrees) and jacket (still using vartrees)
         unknowns['Px'] = Px
         unknowns['Py'] = Py
@@ -239,6 +242,8 @@ class TowerWindDrag(Component):
         Px = Fp*cosd(beta)
         Py = Fp*sind(beta)
         Pz = 0*Fp
+
+        print "CommonSE Px (Wind): ", Px
 
         # pack data
         unknowns['windLoads:Px'] = Px
