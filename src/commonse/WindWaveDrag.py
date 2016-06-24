@@ -200,7 +200,7 @@ class TowerWindDrag(Component):
         self.add_param('rho', 1.225, units='kg/m**3', desc='air density')
         self.add_param('mu', 1.7934e-5, units='kg/(m*s)', desc='dynamic viscosity of air')
         #TODO not sure what to do here?
-        self.add_param('cd_usr', 0.7, desc='User input drag coefficient to override Reynolds number based one')
+        self.add_param('cd_usr', 1000, desc='User input drag coefficient to override Reynolds number based one')
 
         # out
         self.add_output('windLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
@@ -229,13 +229,13 @@ class TowerWindDrag(Component):
         q = 0.5*rho*U**2
 
         # Reynolds number and drag
-        if params['cd_usr']:
+        if params['cd_usr'] == 1000:
+            Re = rho*U*d/mu
+            cd, dcd_dRe = cylinderDrag(Re)
+        else:
             cd = params['cd_usr']
             Re = 1.0
             dcd_dRe = 0.0
-        else:
-            Re = rho*U*d/mu
-            cd, dcd_dRe = cylinderDrag(Re)
         Fp = q*cd*d
 
         # components of distributed loads
