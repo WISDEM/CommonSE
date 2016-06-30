@@ -22,12 +22,13 @@ Copyright (c) NREL. All rights reserved.
 import math
 import numpy as np
 
-from openmdao.main.api import Component, VariableTree
-from openmdao.main.datatypes.api import Float, Array,VarTree
+from openmdao.api import Component, Problem, Group
 from commonse.utilities import sind, cosd  # , linspace_with_deriv, interp_with_deriv, hstack, vstack
 from commonse.csystem import DirectionVector
 
 from akima import Akima
+
+#TODO CHECK
 
 # -----------------
 #  Helper Functions
@@ -65,12 +66,15 @@ def cylinderDrag(Re):
 
     return cd, dcd_dRe
 
+"""
 # -----------------
 #  Variable Trees
 # -----------------
 
 class FluidLoads(VariableTree):
-    """wind/wave loads"""
+"""
+    #wind/wave loads
+"""
 
     Px = Array(units='N/m', desc='distributed loads, force per unit length in x-direction')
     Py = Array(units='N/m', desc='distributed loads, force per unit length in y-direction')
@@ -85,84 +89,149 @@ class FluidLoads(VariableTree):
     Pz0= Float(units='N/m', desc='Distributed load at z=0 MSL')
     qdyn0 = Float(units='N/m**2', desc='dynamic pressure at z=0 MSL')
     beta0 = Float(units='deg', desc='wind/wave angle relative to inertia c.s.')
+"""
 # -----------------
 #  Components
 # -----------------
 
 class AeroHydroLoads(Component):
 
-    windLoads = VarTree(FluidLoads(), iotype='in', desc='wind loads in inertial coordinate system')
-    waveLoads = VarTree(FluidLoads(), iotype='in', desc='wave loads in inertial coordinate system')
-    z = Array(iotype='in', desc='locations along tower')
-    yaw = Float(0.0, iotype='in', units='deg', desc='yaw angle')
+    def __init__(self, nPoints):
 
-    outloads= VarTree(FluidLoads(), iotype='in', desc='combined wind and wave loads')
-    Px = Array(iotype='out', units='N/m', desc='force per unit length in x-direction')
-    Py = Array(iotype='out', units='N/m', desc='force per unit length in y-direction')
-    Pz = Array(iotype='out', units='N/m', desc='force per unit length in z-direction')
-    qdyn = Array(iotype='out', units='N/m**2', desc='dynamic pressure')
+        super(AeroHydroLoads, self).__init__()
 
-    def execute(self):
+        #inputs
+
+        self.add_param('windLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_param('windLoads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_param('windLoads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_param('windLoads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_param('windLoads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_param('windLoads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_param('windLoads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_param('windLoads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('windLoads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('windLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('windLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        self.add_param('windLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+
+
+        self.add_param('waveLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_param('waveLoads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_param('waveLoads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_param('waveLoads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_param('waveLoads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_param('waveLoads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_param('waveLoads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_param('waveLoads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('waveLoads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('waveLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('waveLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        self.add_param('waveLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+
+
+        self.add_param('z', np.zeros(nPoints), units='m', desc='locations along tower')
+        self.add_param('yaw', 0.0, units='deg', desc='yaw angle')
+
+
+        self.add_param('outloads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_param('outloads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_param('outloads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_param('outloads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_param('outloads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_param('outloads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_param('outloads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_param('outloads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('outloads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('outloads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_param('outloads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        self.add_param('outloads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+
+
+        #outputs
+        self.add_output('Px', np.zeros(nPoints), units='N/m', desc='force per unit length in x-direction')
+        self.add_output('Py', np.zeros(nPoints), units='N/m', desc='force per unit length in y-direction')
+        self.add_output('Pz', np.zeros(nPoints), units='N/m', desc='force per unit length in z-direction')
+        self.add_output('qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+
+    def solve_nonlinear(self, params, unknowns, resids):
         # aero/hydro loads
-        wind = self.windLoads
-        wave = self.waveLoads
-        hubHt = self.z[-1]  # top of tower
-        betaMain = np.interp(hubHt, self.z, wind.beta)  # wind coordinate system defined relative to hub height
-        windLoads = DirectionVector(wind.Px, wind.Py, wind.Pz).inertialToWind(betaMain).windToYaw(self.yaw)
-        waveLoads = DirectionVector(wave.Px, wave.Py, wave.Pz).inertialToWind(betaMain).windToYaw(self.yaw)
+        # wind = params['windLoads']
+        # wave = params['waveLoads']
+        # outloads = params['outloads']
+        z = params['z']
+        hubHt = z[-1]  # top of tower
+        betaMain = np.interp(hubHt, z, params['windLoads:beta'])  # wind coordinate system defined relative to hub height
+        windLoads = DirectionVector(params['windLoads:Px'], params['windLoads:Py'], params['windLoads:Pz']).inertialToWind(betaMain).windToYaw(params['yaw'])
+        waveLoads = DirectionVector(params['waveLoads:Px'], params['waveLoads:Py'], params['waveLoads:Pz']).inertialToWind(betaMain).windToYaw(params['yaw'])
 
-        self.outloads.Px = np.interp(self.z, wind.z, windLoads.x) + np.interp(self.z, wave.z, waveLoads.x)
-        self.outloads.Py = np.interp(self.z, wind.z, windLoads.y) + np.interp(self.z, wave.z, waveLoads.y)
-        self.outloads.Pz = np.interp(self.z, wind.z, windLoads.z) + np.interp(self.z, wave.z, waveLoads.z)
-        self.outloads.qdyn = np.interp(self.z, wind.z, wind.qdyn) + np.interp(self.z, wave.z, wave.qdyn)
-        self.outloads.z = self.z
+        Px = np.interp(z, params['windLoads:z'], windLoads.x) + np.interp(z, params['waveLoads:z'], waveLoads.x)
+        Py = np.interp(z, params['windLoads:z'], windLoads.y) + np.interp(z, params['waveLoads:z'], waveLoads.y)
+        Pz = np.interp(z, params['windLoads:z'], windLoads.z) + np.interp(z, params['waveLoads:z'], waveLoads.z)
+        qdyn = np.interp(z, params['windLoads:z'], params['windLoads:qdyn']) + np.interp(z, params['waveLoads:z'], params['waveLoads:qdyn'])
+        # outloads.z = z
+
         #The following are redundant, at one point we will consolidate them to something that works for both tower (not using vartrees) and jacket (still using vartrees)
-        self.Px   =self.outloads.Px
-        self.Py   =self.outloads.Py
-        self.Pz   =self.outloads.Pz
-        self.qdyn =self.outloads.qdyn
+        unknowns['Px'] = Px
+        unknowns['Py'] = Py
+        unknowns['Pz'] = Pz
+        unknowns['qdyn'] = qdyn
 
 # -----------------
 
 class TowerWindDrag(Component):
     """drag forces on a cylindrical tower due to wind"""
 
-    # variables
-    U = Array(iotype='in', units='m/s', desc='magnitude of wind speed')
-    z = Array(iotype='in', units='m', desc='heights where wind speed was computed')
-    d = Array(iotype='in', units='m', desc='corresponding diameter of cylinder section')
+    def __init__(self, nPoints):
 
-    # parameters
-    beta = Array(iotype='in', units='deg', desc='corresponding wind angles relative to inertial coordinate system')
-    rho = Float(1.225, iotype='in', units='kg/m**3', desc='air density')
-    mu = Float(1.7934e-5, iotype='in', units='kg/(m*s)', desc='dynamic viscosity of air')
-    cd_usr = Float(iotype='in', desc='User input drag coefficient to override Reynolds number based one')
+        super(TowerWindDrag, self).__init__()
 
-    # out
-    windLoads = VarTree(FluidLoads(), iotype='out', desc='wind loads in inertial coordinate system')
+        # variables
+        self.add_param('U', np.zeros(nPoints), units='m/s', desc='magnitude of wind speed')
+        self.add_param('z', np.zeros(nPoints), units='m', desc='heights where wind speed was computed')
+        self.add_param('d', np.zeros(nPoints), units='m', desc='corresponding diameter of cylinder section')
 
-    missing_deriv_policy = 'assume_zero'
+        # parameters
+        self.add_param('beta', np.zeros(nPoints), units='deg', desc='corresponding wind angles relative to inertial coordinate system')
+        self.add_param('rho', 1.225, units='kg/m**3', desc='air density')
+        self.add_param('mu', 1.7934e-5, units='kg/(m*s)', desc='dynamic viscosity of air')
+        #TODO not sure what to do here?
+        self.add_param('cd_usr', 1000, desc='User input drag coefficient to override Reynolds number based one')
+
+        # out
+        self.add_output('windLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_output('windLoads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_output('windLoads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_output('windLoads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_output('windLoads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_output('windLoads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_output('windLoads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_output('windLoads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_output('windLoads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_output('windLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_output('windLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        self.add_output('windLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
 
 
-    def execute(self):
+    def solve_nonlinear(self, params, unknowns, resids):
 
-        rho = self.rho
-        U = self.U
-        d = self.d
-        mu = self.mu
-        beta = self.beta
+        rho = params['rho']
+        U = params['U']
+        d = params['d']
+        mu = params['mu']
+        beta = params['beta']
 
         # dynamic pressure
         q = 0.5*rho*U**2
 
         # Reynolds number and drag
-        if self.cd_usr:
-            cd = self.cd_usr
-            Re = 1.0
-            dcd_dRe = 0.0
-        else:
+        if params['cd_usr'] == 1000:
             Re = rho*U*d/mu
             cd, dcd_dRe = cylinderDrag(Re)
+        else:
+            cd = params['cd_usr']
+            Re = 1.0
+            dcd_dRe = 0.0
         Fp = q*cd*d
 
         # components of distributed loads
@@ -171,45 +240,69 @@ class TowerWindDrag(Component):
         Pz = 0*Fp
 
         # pack data
-        self.windLoads.Px = Px
-        self.windLoads.Py = Py
-        self.windLoads.Pz = Pz
-        self.windLoads.qdyn = q
-        self.windLoads.z = self.z
-        self.windLoads.beta = beta
+        unknowns['windLoads:Px'] = Px
+        unknowns['windLoads:Py'] = Py
+        unknowns['windLoads:Pz'] = Pz
+        unknowns['windLoads:qdyn'] = q
+        unknowns['windLoads:z'] = params['z']
+        unknowns['windLoads:beta'] = beta
+
+
+    def linearize(self, params, unknowns, resids):
+
+        # rename
+        rho = params['rho']
+        U = params['U']
+        d = params['d']
+        mu = params['mu']
+        beta = params['beta']
+
+        # dynamic pressure
+        q = 0.5*rho*U**2
+
+        # Reynolds number and drag
+        if params['cd_usr']:
+            cd = params['cd_usr']
+            Re = 1.0
+            dcd_dRe = 0.0
+        else:
+            Re = rho*U*d/mu
+            cd, dcd_dRe = cylinderDrag(Re)
 
         # derivatives
-        self.dq_dU = rho*U
-        const = (self.dq_dU*cd + q*dcd_dRe*rho*d/mu)*d
-        self.dPx_dU = const*cosd(beta)
-        self.dPy_dU = const*sind(beta)
+        dq_dU = rho*U
+        const = (dq_dU*cd + q*dcd_dRe*rho*d/mu)*d
+        dPx_dU = const*cosd(beta)
+        dPy_dU = const*sind(beta)
 
         const = (cd + dcd_dRe*Re)*q
-        self.dPx_dd = const*cosd(beta)
-        self.dPy_dd = const*sind(beta)
+        dPx_dd = const*cosd(beta)
+        dPy_dd = const*sind(beta)
 
-
-    def list_deriv_vars(self):
-
-        inputs = ('U', 'z', 'd')
-        outputs = ('windLoads.Px', 'windLoads.Py', 'windLoads.Pz', 'windLoads.qdyn', 'windLoads.z')
-
-        return inputs, outputs
-
-
-    def provideJ(self):
-
-        n = len(self.z)
+        n = len(params['z'])
 
         zeron = np.zeros((n, n))
 
-        dPx = np.hstack([np.diag(self.dPx_dU), zeron, np.diag(self.dPx_dd)])
-        dPy = np.hstack([np.diag(self.dPy_dU), zeron, np.diag(self.dPy_dd)])
-        dPz = np.zeros((n, 3*n))
-        dq = np.hstack([np.diag(self.dq_dU), np.zeros((n, 2*n))])
-        dz = np.hstack([zeron, np.eye(n), zeron])
+        J = {}
+        J['windLoads.Px', 'U'] = np.diag(dPx_dU)
+        J['windLoads.Px', 'z'] = zeron
+        J['windLoads.Px', 'd'] = np.diag(dPx_dd)
 
-        J = np.vstack([dPx, dPy, dPz, dq, dz])
+        J['windLoads.Py', 'U'] = np.diag(dPy_dU)
+        J['windLoads.Py', 'z'] = zeron
+        J['windLoads.Py', 'd'] = np.diag(dPy_dd)
+
+        J['windLoads.Pz', 'U'] = zeron
+        J['windLoads.Pz', 'z'] = zeron
+        J['windLoads.Pz', 'd'] = zeron
+
+        J['windLoads.qdyn', 'U'] = np.diag(dq_dU)
+        J['windLoads.qdyn', 'z'] = zeron
+        J['windLoads.qdyn', 'd'] = zeron
+
+        J['windLoads.z', 'U'] = zeron
+        J['windLoads.z', 'z'] = np.eye(n)
+        J['windLoads.z', 'd'] = zeron
 
         return J
 
@@ -218,60 +311,69 @@ class TowerWindDrag(Component):
 class TowerWaveDrag(Component):
     """drag forces on a cylindrical tower due to waves"""
 
-    # variables
-    U = Array(iotype='in', units='m/s', desc='magnitude of wave speed')
-    U0= Float(iotype='in', units='m/s', desc='magnitude of wave speed at z=0 MSL')
-    A = Array(iotype='in', units='m/s**2', desc='magnitude of wave acceleration')
-    A0= Float(iotype='in', units='m/s**2', desc='magnitude of wave acceleration at z=0 MSL')
-    z = Array(iotype='in', units='m', desc='heights where wave speed was computed')
-    d = Array(iotype='in', units='m', desc='corresponding diameter of cylinder section')
+    def __init__(self, nPoints):
 
-    # parameters
-    wlevel = Float(iotype='in', units='m', desc='Water Level, to assess z w.r.t. MSL')
-    beta = Array(iotype='in', units='deg', desc='corresponding wave angles relative to inertial coordinate system')
-    beta0= Float(iotype='in', units='deg', desc='corresponding wave angles relative to inertial coordinate system at z=0 MSL')
-    rho = Float(1027.0, iotype='in', units='kg/m**3', desc='water density')
-    mu = Float(1.3351e-3, iotype='in', units='kg/(m*s)', desc='dynamic viscosity of water')
-    cm = Float(2.0, iotype='in', desc='mass coefficient')
-    cd_usr = Float(iotype='in', desc='User input drag coefficient to override Reynolds number based one')
+        super(TowerWaveDrag, self).__init__()
 
-    # out
-    waveLoads = VarTree(FluidLoads(), iotype='out', desc='wave loads in inertial coordinate system')
+        # variables
+        self.add_param('U', np.zeros(nPoints), units='m/s', desc='magnitude of wave speed')
+        self.add_param('U0', 0.0, units='m/s', desc='magnitude of wave speed at z=0 MSL')
+        self.add_param('A', np.zeros(nPoints), units='m/s**2', desc='magnitude of wave acceleration')
+        self.add_param('A0', 0.0, units='m/s**2', desc='magnitude of wave acceleration at z=0 MSL')
+        self.add_param('z', np.zeros(nPoints), units='m', desc='heights where wave speed was computed')
+        self.add_param('d', np.zeros(nPoints), units='m', desc='corresponding diameter of cylinder section')
+
+        # parameters
+        self.add_param('wlevel', 0.0, units='m', desc='Water Level, to assess z w.r.t. MSL')
+        self.add_param('beta', np.zeros(nPoints), units='deg', desc='corresponding wave angles relative to inertial coordinate system')
+        self.add_param('beta0', 0.0, units='deg', desc='corresponding wave angles relative to inertial coordinate system at z=0 MSL')
+        self.add_param('rho', 1027.0, units='kg/m**3', desc='water density')
+        self.add_param('mu', 1.3351e-3, units='kg/(m*s)', desc='dynamic viscosity of water')
+        self.add_param('cm', 2.0, desc='mass coefficient')
+        #TODO not sure what to do here?
+        self.add_param('cd_usr', 0.7, desc='User input drag coefficient to override Reynolds number based one')
+
+        # out
+        self.add_output('waveLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_output('waveLoads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_output('waveLoads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_output('waveLoads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_output('waveLoads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_output('waveLoads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_output('waveLoads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_output('waveLoads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_output('waveLoads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_output('waveLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        self.add_output('waveLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        self.add_output('waveLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
 
 
-    missing_deriv_policy = 'assume_zero'
+    def solve_nonlinear(self, params, unknowns, resids):
 
-
-    def execute(self):
-
-        rho = self.rho
-        U = self.U
-        U0 = self.U0
-        d = self.d
-        zrel= self.z-self.wlevel
-        mu = self.mu
-        beta = self.beta
-        beta0= self.beta0
+        rho = params['rho']
+        U = params['U']
+        U0 = params['U0']
+        d = params['d']
+        zrel= params['z']-params['wlevel']
+        mu = params['mu']
+        beta = params['beta']
+        beta0 = params['beta0']
 
         # dynamic pressure
         q = 0.5*rho*U**2
         q0= 0.5*rho*U0**2
 
         # Reynolds number and drag
-        if self.cd_usr:
-            cd = self.cd_usr*np.ones_like(self.d)
+        if params['cd_usr']:
+            cd = params['cd_usr']*np.ones_like(d)
             Re = 1.0
             dcd_dRe = 0.0
         else:
             Re = rho*U*d/mu
             cd, dcd_dRe = cylinderDrag(Re)
 
-        d = self.d
-        mu = self.mu
-        beta = self.beta
-
         # inertial and drag forces
-        Fi = rho*self.cm*math.pi/4.0*d**2*self.A  # Morrison's equation
+        Fi = rho*params['cm']*math.pi/4.0*d**2*params['A']  # Morrison's equation
         Fd = q*cd*d
         Fp = Fi + Fd
 
@@ -285,7 +387,7 @@ class TowerWaveDrag(Component):
         elif (zrel[idx0]>0.) and (idx0>0):     # point above water
             d0 = np.mean(d[idx0-1:idx0+1])
             cd0 = np.mean(cd[idx0-1:idx0+1])
-        Fi0 = rho*self.cm*math.pi/4.0*d0**2*self.A0  # Morrison's equation
+        Fi0 = rho*params['cm']*math.pi/4.0*d0**2*params['A0']  # Morrison's equation
         Fd0 = q0*cd0*d0
         Fp0 = Fi0 + Fd0
 
@@ -299,82 +401,137 @@ class TowerWaveDrag(Component):
         Pz0 = 0.*Fp0
 
         #Store qties at z=0 MSL
-        self.waveLoads.Px0 = Px0
-        self.waveLoads.Py0 = Py0
-        self.waveLoads.Pz0 = Pz0
-        self.waveLoads.q0 = q0
-        self.waveLoads.beta0 = beta0
+        unknowns['waveLoads:Px0'] = Px0
+        unknowns['waveLoads:Py0'] = Py0
+        unknowns['waveLoads:Pz0'] = Pz0
+        unknowns['waveLoads:qdyn0'] = q0
+        unknowns['waveLoads:beta0'] = beta0
 
         # pack data
-        self.waveLoads.Px = Px
-        self.waveLoads.Py = Py
-        self.waveLoads.Pz = Pz
-        self.waveLoads.qdyn = q
-        self.waveLoads.z = self.z
-        self.waveLoads.beta = beta
-        self.waveLoads.d = d
+        unknowns['waveLoads:Px'] = Px
+        unknowns['waveLoads:Py'] = Py
+        unknowns['waveLoads:Pz'] = Pz
+        unknowns['waveLoads:qdyn'] = q
+        unknowns['waveLoads:z'] = params['z']
+        unknowns['waveLoads:beta'] = beta
+        unknowns['waveLoads:d'] = d
 
+
+    def linearize(self, params, unknowns, resids):
+
+        rho = params['rho']
+        U = params['U']
+        U0 = params['U0']
+        d = params['d']
+        zrel= params['z']-params['wlevel']
+        mu = params['mu']
+        beta = params['beta']
+        beta0 = params['beta0']
+
+        # dynamic pressure
+        q = 0.5*rho*U**2
+        q0= 0.5*rho*U0**2
+
+        # Reynolds number and drag
+        if params['cd_usr']:
+            cd = params['cd_usr']*np.ones_like(d)
+            Re = 1.0
+            dcd_dRe = 0.0
+        else:
+            Re = rho*U*d/mu
+            cd, dcd_dRe = cylinderDrag(Re)
 
         # derivatives
-        self.dq_dU = rho*U
-        const = (self.dq_dU*cd + q*dcd_dRe*rho*d/mu)*d
-        self.dPx_dU = const*cosd(beta)
-        self.dPy_dU = const*sind(beta)
+        dq_dU = rho*U
+        const = (dq_dU*cd + q*dcd_dRe*rho*d/mu)*d
+        dPx_dU = const*cosd(beta)
+        dPy_dU = const*sind(beta)
 
-        const = (cd + dcd_dRe*Re)*q + rho*self.cm*math.pi/4.0*2*d*self.A
-        self.dPx_dd = const*cosd(beta)
-        self.dPy_dd = const*sind(beta)
+        const = (cd + dcd_dRe*Re)*q + rho*params['cm']*math.pi/4.0*2*d*params['A']
+        dPx_dd = const*cosd(beta)
+        dPy_dd = const*sind(beta)
 
-        const = rho*self.cm*math.pi/4.0*d**2
-        self.dPx_dA = const*cosd(beta)
-        self.dPy_dA = const*sind(beta)
+        const = rho*params['cm']*math.pi/4.0*d**2
+        dPx_dA = const*cosd(beta)
+        dPy_dA = const*sind(beta)
 
-
-    def list_deriv_vars(self):
-
-        inputs = ('U', 'A', 'z', 'd')
-        outputs = ('waveLoads.Px', 'waveLoads.Py', 'waveLoads.Pz', 'waveLoads.qdyn', 'waveLoads.z', 'waveLoads.beta')
-
-        return inputs, outputs
-
-
-    def provideJ(self):
-
-        n = len(self.z)
+        n = len(params['z'])
 
         zeron = np.zeros((n, n))
 
-        dPx = np.hstack([np.diag(self.dPx_dU), np.diag(self.dPx_dA), zeron, np.diag(self.dPx_dd)])
-        dPy = np.hstack([np.diag(self.dPy_dU), np.diag(self.dPy_dA), zeron, np.diag(self.dPy_dd)])
-        dPz = np.zeros((n, 4*n))
-        dq = np.hstack([np.diag(self.dq_dU), np.zeros((n, 3*n))])
-        dz = np.hstack([zeron, zeron, np.eye(n), zeron])
 
-        J = np.vstack([dPx, dPy, dPz, dq, dz, np.zeros((n, 4*n))])  # TODO: remove these zeros after OpenMDAO bug fix (don't need waveLoads.beta)
+        J = {}
+        J['waveLoads.Px', 'U'] = np.diag(dPx_dU)
+        J['waveLoads.Px', 'A'] = np.diag(dPx_dA)
+        J['waveLoads.Px', 'z'] = zeron
+        J['waveLoads.Px', 'd'] = np.diag(dPx_dd)
+
+        J['waveLoads.Py', 'U'] = np.diag(dPy_dU)
+        J['waveLoads.Py', 'A'] = np.diag(dPy_dA)
+        J['waveLoads.Py', 'z'] = zeron
+        J['waveLoads.Py', 'd'] = np.diag(dPy_dd)
+
+        J['waveLoads.Pz', 'U'] = zeron
+        J['waveLoads.Pz', 'A'] = zeron
+        J['waveLoads.Pz', 'z'] = zeron
+        J['waveLoads.Pz', 'd'] = zeron
+
+        J['waveLoads.qdyn', 'U'] = np.diag(dq_dU)
+        J['waveLoads.qdyn', 'A'] = zeron
+        J['waveLoads.qdyn', 'z'] = zeron
+        J['waveLoads.qdyn', 'd'] = zeron
+
+        J['waveLoads.z', 'U'] = zeron
+        J['waveLoads.z', 'A'] = zeron
+        J['waveLoads.z', 'z'] = np.eye(n)
+        J['waveLoads.z', 'd'] = zeron
 
         return J
 
 #___________________________________________#
 
 def main():
-    load=TowerWindDrag()
-    load.U = np.array([20., 25., 30.])
-    load.z = np.array([10., 30., 80.])
-    load.d = np.array([5.5, 4., 3.])
+    # initialize problem
+    U = np.array([20., 25., 30.])
+    z = np.array([10., 30., 80.])
+    d = np.array([5.5, 4., 3.])
 
-    load.beta = np.array([45., 45., 45.])
-    load.rho = 1.225
-    load.mu = 1.7934e-5
-    load.cd_usr = 0.7
+    beta = np.array([45., 45., 45.])
+    rho = 1.225
+    mu = 1.7934e-5
+    #cd_usr = 0.7
+
+    nPoints = len(z)
+
+
+    prob = Problem()
+
+    root = prob.root = Group()
+
+    root.add('p1', TowerWindDrag(nPoints))
+
+    prob.setup()
+
+    prob['p1.U'] = U
+    prob['p1.z'] = z
+    prob['p1.d'] = d
+    prob['p1.beta'] = beta
+    prob['p1.rho'] = rho
+    prob['p1.mu'] = mu
+    #prob['p1.cd_usr'] = cd_usr
 
     #run
-    load.run()
+    prob.run()
 
     # out
+    Re = prob['p1.rho']*prob['p1.U']*prob['p1.d']/prob['p1.mu']
+    cd, dcd_dRe = cylinderDrag(Re)
+    print cd
     import matplotlib.pyplot as plt
-    plt.plot(load.windLoads.Px, load.windLoads.z)
-    plt.plot(load.windLoads.Py, load.windLoads.z)
-    plt.plot(load.windLoads.qdyn, load.windLoads.z)
+
+    plt.plot(prob['p1.windLoads:Px'], prob['p1.windLoads:z'])
+    plt.plot(prob['p1.windLoads:Py'], prob['p1.windLoads:z'])
+    plt.plot(prob['p1.windLoads:qdyn'], prob['p1.windLoads:z'])
     plt.show()
 
 if __name__ == '__main__':
