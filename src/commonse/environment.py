@@ -274,10 +274,10 @@ class LinearWaves(WaveBase):
 
         # maximum velocity
         unknowns['U'] = h/2.0*omega*np.cosh(k*(z_rel + d))/math.sinh(k*d) + params['Uc']
-        unknowns['U0'] = h/2.0*omega*np.cosh(k*(0. + d))/math.sinh(k*d) + sparams['Uc']
+        unknowns['U0'] = h/2.0*omega*np.cosh(k*(0. + d))/math.sinh(k*d) + params['Uc']
 
         # check heights
-        unknowns['U'][np.logical_or(params['z'] < parmas['z_floor'], params['z'] > params['z_surface'])] = 0.
+        unknowns['U'][np.logical_or(params['z'] < params['z_floor'], params['z'] > params['z_surface'])] = 0.
 
         # acceleration
         unknowns['A']  = unknowns['U'] * omega
@@ -305,8 +305,7 @@ class LinearWaves(WaveBase):
         dA_dz = omega*dU_dz
         dA_dUc = omega*dU_dUc
 
-        dU0 = np.zeros(len(z) + 1)
-        dU0[-1] = 1.0
+        dU0 = np.zeros((1,len(z)))
         dA0 = omega * dU0
 
         J = {}
@@ -314,10 +313,10 @@ class LinearWaves(WaveBase):
         J['U', 'Uc'] = dU_dUc
         J['A', 'z'] = np.diag(dA_dz)
         J['A', 'Uc'] = dA_dUc
-        J['U0', 'z'] = np.transpose(dU0)
-        J['U0', 'Uc'] = 0.0 #TODO is this zero? or one?
-        J['A0', 'z'] = np.transpose(dA0)
-        J['A0', 'Uc'] = 0.0 #TODO is this zero?
+        J['U0', 'z'] = dU0
+        J['U0', 'Uc'] = 1.0
+        J['A0', 'z'] = dA0
+        J['A0', 'Uc'] = 1.0
 
         return J
 
@@ -379,14 +378,6 @@ class TowerSoil(SoilBase):
 
         unknowns['k'] = np.array([k_x, k_thetax, k_x, k_thetax, k_z, k_phi])
         unknowns['k'][params['rigid']] = float('inf')
-
-
-    def list_deriv_vars(self):
-
-        inputs = ('r0', 'depth')
-        outputs = ('k',)
-
-        return inputs, outputs
 
 
     def linearize(self, params, unknowns, resids):

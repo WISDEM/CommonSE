@@ -1,5 +1,5 @@
 import numpy as np
-from openmdao.api import Component
+from openmdao.api import Component, Problem
 
 from commonse.utilities import hstack, vstack
 from commonse.csystem import DirectionVector
@@ -67,7 +67,7 @@ class RNAMass(Component):
 
 
     def linearize(self, params, unknowns, resids):
-        
+
         blades_mass = params['blades_mass']
         hub_mass = params['hub_mass']
         nac_mass = params['nac_mass']
@@ -90,7 +90,7 @@ class RNAMass(Component):
         J['rna_mass', 'hub_I'] = np.zeros(6)
         J['rna_mass', 'nac_I'] = np.zeros(6)
 
-        
+
         # cm
         numerator = (blades_mass+hub_mass)*hub_cm+nac_mass*nac_cm
 
@@ -265,10 +265,8 @@ class RotorLoads(Component):
 
         J['top_M', 'F'] = dtopM_dF
         J['top_M', 'M'] = dtopM_dM
-        J['top_M', 'r_hub'] = dtopM_dr  
-        J['top_M', 'm_RNA'] = dtopM_dm  
-        J['top_M', 'rna_cm'] = dtopM_drnacm  
+        J['top_M', 'r_hub'] = dtopM_dr
+        J['top_M', 'm_RNA'] = dtopM_dm
+        J['top_M', 'rna_cm'] = dtopM_drnacm
 
         return J
-
-
