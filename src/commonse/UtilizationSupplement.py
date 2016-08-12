@@ -118,7 +118,7 @@ def vonMisesStressUtilization(axial_stress, hoop_stress, shear_stress, gamma, si
     stress_utilization = gamma * von_mises / sigma_y
 
     return stress_utilization  # This must be <1 to pass
-
+    print(stress_utilization)
 
 def hoopStressEurocode(z, d, t, L_reinforced, q_dyn):
     """default method for computing hoop stress using Eurocode method"""

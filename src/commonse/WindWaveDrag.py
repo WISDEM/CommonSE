@@ -18,6 +18,8 @@ Copyright (c) NREL. All rights reserved.
 #                             Reestablished elements needed by jacketSE that were removed. Changed names to vartrees.
 # Copyright:   (c) rdamiani 2015
 # Licence:     <Apache 2015>
+
+#All lines marked CJB+, CJB-, or CJBe have been added, "removed" (commented out), or edited respectively by Casey Broslawski. Summer 2016
 #-------------------------------------------------------------------------------
 import math
 import numpy as np
@@ -28,6 +30,8 @@ from commonse.utilities import sind, cosd  # , linspace_with_deriv, interp_with_
 from commonse.csystem import DirectionVector
 
 from akima import Akima
+
+print("Modified WindWaveDrag file") #CJB+
 
 # -----------------
 #  Helper Functions
@@ -188,14 +192,12 @@ class TowerWindDrag(Component):
         self.dPx_dd = const*cosd(beta)
         self.dPy_dd = const*sind(beta)
 
-
     def list_deriv_vars(self):
 
         inputs = ('U', 'z', 'd')
         outputs = ('windLoads.Px', 'windLoads.Py', 'windLoads.Pz', 'windLoads.qdyn', 'windLoads.z')
 
         return inputs, outputs
-
 
     def provideJ(self):
 
@@ -248,7 +250,8 @@ class TowerWaveDrag(Component):
         U = self.U
         U0 = self.U0
         d = self.d
-        zrel= self.z-self.wlevel
+        #zrel= self.z-self.wlevel #CJB- Original code. Modified line below.
+        zrel= self.z #-self.wlevel #CJBe
         mu = self.mu
         beta = self.beta
         beta0= self.beta0
@@ -329,14 +332,12 @@ class TowerWaveDrag(Component):
         self.dPx_dA = const*cosd(beta)
         self.dPy_dA = const*sind(beta)
 
-
     def list_deriv_vars(self):
 
         inputs = ('U', 'A', 'z', 'd')
         outputs = ('waveLoads.Px', 'waveLoads.Py', 'waveLoads.Pz', 'waveLoads.qdyn', 'waveLoads.z', 'waveLoads.beta')
 
         return inputs, outputs
-
 
     def provideJ(self):
 
