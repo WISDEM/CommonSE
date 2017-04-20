@@ -25,7 +25,7 @@ class Tube:
     """The Tube Class contains functions to calculate properties of tubular circular cross-sections
     for structural analyses. It assumes 1 material specification, even though I may pass
     more than 1 element (D's,L's,Kbuck's, and t's) to the class."""
-    def __init__(self,D,t,Lgth=np.NaN, Kbuck=1., mat=Material(name='ASTM992 steel')):
+    def __init__(self,D,t,Lgth=np.NaN, Kbuck=1., mat=Material(matname='ASTM992 steel')):
         self.D=D
         self.t=t
         self.L=Lgth*np.ones(np.size(D)) #this makes sure we exapnd Lght if D,t, arrays
