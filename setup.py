@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 # from numpy.distutils.core import setup, Extension
 
 
@@ -8,7 +8,10 @@ setup(
     description='Common utilities for NREL WISDEM',
     author='S. Andrew Ning',
     author_email='andrew.ning@nrel.gov',
+    #packages= find_packages(),
     packages=['commonse'],
+    package_data={'':['*.txt']},
+    include_package_data = True,
     package_dir={'': 'src'},
     license='Apache License, Version 2.0',
     install_requires=['akima>=1.0'],
