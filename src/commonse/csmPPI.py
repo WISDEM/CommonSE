@@ -5,7 +5,7 @@ Created by George Scott on 2012-08-01.
 Modified by Katherine Dykes 2012.
 Copyright (c) NREL. All rights reserved.
 """
-
+import commonse
 import os
 import sys
 import re
@@ -129,13 +129,12 @@ class PPI:
         self.curr_mon = curr_mon
         self.debug = debug
 
-        thisdir = os.path.dirname(os.path.realpath(__file__))   
-        fullfile = os.path.join(thisdir, self.tblfile)
+        fullfile = os.path.join(commonse.__path__[0], self.tblfile)
         try:
             infile = open(fullfile, 'r') #infile = open(self.tblfile)
         except:
-            sys.stdout.write ("Error opening or reading %s\n" % self.tblfile)
-            pass
+            sys.stdout.write ("Error opening or reading %s\n" % fullfile)
+            quit()
         else:
             if (self.debug > 0):
                 sys.stdout.write ("Opened %s\n" % self.tblfile)
