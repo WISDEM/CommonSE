@@ -9,7 +9,7 @@ setup(
     author='S. Andrew Ning',
     author_email='andrew.ning@nrel.gov',
     #packages= find_packages(),
-    packages=['commonse', 'commonse.static'],
+    packages=['commonse'],
     package_data={'':['*.txt']},
     include_package_data = True,
     package_dir={'': 'src'},
