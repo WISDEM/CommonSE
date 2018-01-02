@@ -5,8 +5,6 @@ environment.py
 
 Created by Andrew Ning on 2012-01-20.
 Copyright (c) NREL. All rights reserved.
-
-All lines marked CJB+, CJB-, or CJBe have been added, "removed" (commented out), or edited respectively by Casey Broslawski. Summer 2016
 """
 
 import math
@@ -17,11 +15,10 @@ from openmdao.main.datatypes.api import Float, Array
 
 from utilities import hstack, vstack
 
-print ("Modified Environment file") #CJB+
-
 # -----------------
 #  Base Components
 # -----------------
+
 
 class WindBase(Component):
     """base component for wind speed/direction"""
@@ -70,7 +67,6 @@ class WaveBase(Component):
         self.U0 = 0.
         self.A0 = 0.
         self.beta0 = 0.
-        print(self.z_surface)
 
 
 
@@ -252,14 +248,12 @@ class LinearWaves(WaveBase):
     T = Float(iotype='in', units='s', desc='period of maximum wave height')
     g = Float(9.81, iotype='in', units='m/s**2', desc='acceleration of gravity')
     betaWave = Float(0.0, iotype='in', units='deg', desc='wave angle relative to inertial coordinate system')
-    wdepth = Float(iotype='in', units='m', desc='Water Depth') #CJB+
 
     missing_deriv_policy = 'assume_zero'
 
     def execute(self):
 
         # water depth
-        #CJB z_surface = wdepth+z_floor, so d = wdepth
         d = self.z_surface - self.z_floor
 
         # design wave height
@@ -302,7 +296,6 @@ class LinearWaves(WaveBase):
         dA0 = omega * dU0
 
         self.J = vstack([hstack([np.diag(dU_dz), dU_dUc]), hstack([np.diag(dA_dz), dA_dUc]), np.transpose(dU0), np.transpose(dA0)])
-
 
 
     def list_deriv_vars(self):

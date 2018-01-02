@@ -9,7 +9,6 @@ Copyright (c) NREL. All rights reserved.
 
 import numpy as np
 from scipy.linalg import solve_banded
-from openmdao.main.interfaces import IAssembly
 
 
 def cosd(value):
@@ -378,31 +377,12 @@ class CubicSplineSegment(object):
 
 def print_vars(comp, list_type='inputs', prefix='', astable=False):
 
-    comp_reserved = ['driver']
-    reserved = ['missing_deriv_policy', 'force_execute', 'directory', 'force_fd', 'printvars', 'exec_count']
-
-    # recursively search for subassemblies
-    if IAssembly.providedBy(comp):  # outer needs to be an assembly
-        subcomp = comp.list_components()
-
-        for subc_name in subcomp:
-            if subc_name in comp_reserved:
-                continue
-
-            subc = getattr(comp, subc_name)
-            if IAssembly.providedBy(subc):  # inner must be an subassembly
-                if prefix is not None:
-                    newprefix = prefix + '.' + subc_name
-                else:
-                    newprefix = subc_name
-                print_vars(subc, list_type, newprefix, astable)
-                continue
-
+    reserved = ['missing_deriv_policy', 'force_execute', 'directory', 'force_fd']
 
     if list_type == 'inputs':
-        thelist = comp.list_inputs(connected=False)
+        thelist = comp.list_inputs()
     elif list_type == 'outputs':
-        thelist = comp.list_outputs(connected=False)
+        thelist = comp.list_inputs()
     elif list_type == 'vars':
         thelist = comp.list_vars()
 
@@ -420,7 +400,7 @@ def print_vars(comp, list_type='inputs', prefix='', astable=False):
                 newprefix = prefix + '.' + name
             else:
                 newprefix = name
-            print_vars(vartree, 'vars', newprefix, astable)
+            print_vars(vartree, 'vars', prefix=newprefix)
             continue
 
         units = trait.units
