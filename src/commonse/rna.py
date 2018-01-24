@@ -3,6 +3,7 @@ from openmdao.api import Component, Problem
 
 from commonse.utilities import hstack, vstack
 from commonse.csystem import DirectionVector
+from commonse.constants import gravity
 
 #TODO CHECK
 
@@ -153,7 +154,7 @@ class RotorLoads(Component):
         # parameters
         self.add_param('downwind', False)
         self.add_param('tilt', 0.0, units='deg')
-        self.add_param('g', 9.81, units='m/s**2', desc='Gravity Acceleration (ABSOLUTE VALUE!)')
+        self.add_param('g', gravity, units='m/s**2', desc='Gravity Acceleration (ABSOLUTE VALUE!)')
 
         # out
         self.add_output('top_F', np.zeros(3))  # in yaw-aligned

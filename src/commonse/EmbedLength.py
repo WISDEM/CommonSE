@@ -12,9 +12,10 @@
 
 import numpy as np
 import scipy.integrate, warnings
+from constants import gravity
 
 #______________________________________________________________________________#
-def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=9.8065):
+def EmbedLength(Dpile,tpile,rho,Nhead,soil,gravity=gravity):
       """This function calculates the embedment length for a pile, solely based on \n
         soil friction and toe capacity, no lateral stability. It assumes \n
         both internal and external surfaces available, no plug. \n

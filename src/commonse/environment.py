@@ -14,6 +14,7 @@ from openmdao.api import Component, Problem, Group, IndepVarComp
 import sys
 
 from utilities import hstack, vstack
+from constants import gravity
 
 #TODO CHECK
 
@@ -251,7 +252,7 @@ class LinearWaves(WaveBase):
         # parameters
         self.add_param('hmax', 0.0, units='m', desc='maximum wave height (crest-to-trough)')
         self.add_param('T', 0.0, units='s', desc='period of maximum wave height')
-        self.add_param('g', 9.81, units='m/s**2', desc='acceleration of gravity')
+        self.add_param('g', gravity, units='m/s**2', desc='acceleration of gravity')
         self.add_param('betaWave', 0.0, units='deg', desc='wave angle relative to inertial coordinate system')
 
 
