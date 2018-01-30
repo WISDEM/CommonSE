@@ -39,6 +39,7 @@ class WindBase(Component):
 
         # parameters
         self.add_param('z0', 0.0, units='m', desc='bottom of wind profile (height of ground/sea)')
+        self.add_param('betaWind', 0.0, units='deg', desc='wind angle relative to inertial coordinate system')
 
         # out
         self.add_output('U', np.zeros(nPoints), units='m/s', desc='magnitude of wind speed at each z location')
@@ -105,7 +106,6 @@ class PowerWind(WindBase):
 
         # parameters
         self.add_param('shearExp', 0.2, desc='shear exponent')
-        self.add_param('betaWind', 0.0, units='deg', desc='wind angle relative to inertial coordinate system')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -190,7 +190,6 @@ class LogWind(WindBase):
 
         # parameters
         self.add_param('z_roughness', 10.0, units='mm', desc='surface roughness length')
-        self.add_param('betaWind', 0.0, units='deg', desc='wind angle relative to inertial coordinate system')
 
 
     def solve_nonlinear(self, params, unknowns, resids):

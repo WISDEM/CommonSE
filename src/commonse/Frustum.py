@@ -28,15 +28,15 @@ def frustum(Db, Dt, H):
     cm : float,        geometric centroid relative to bottom (center of mass if uniform density)
 
     """
-
-    vol = np.pi/12*H * (Db**2 + Dt**2 + Db * Dt)
-    cm = H/4 * (Db**2 + 3*Dt**2 + 2*Db*Dt) / (Db**2 + Dt**2 + Db*Dt)
-
+    vol = frustumVol(Db, Dt, H, diamFlag=True)
+    cm  = frustumCG(Db, Dt, H, diamFlag=True)
+    #vol = np.pi/12*H * (Db**2 + Dt**2 + Db * Dt)
+    #cm = H/4 * (Db**2 + 3*Dt**2 + 2*Db*Dt) / (Db**2 + Dt**2 + Db*Dt)
     return vol, cm
 
 
-def frustumVol_radius(rb, rt, h):
-    """This function returns a frustum's volume with radii inputs
+def frustumVol(rb, rt, h, diamFlag=False):
+    """This function returns a frustum's volume with radii or diameter inputs.
 
     INPUTS:
     Parameters
@@ -44,31 +44,20 @@ def frustumVol_radius(rb, rt, h):
     rb : float (scalar/vector),  base radius
     rt : float (scalar/vector),  top radius
     h  : float (scalar/vector),  height
+    diamFlag : boolean, True if rb and rt are entered as diameters
 
     OUTPUTs:
     -------
     vol : float (scalar/vector), volume
     """
+    if diamFlag:
+        # Convert diameters to radii
+        rb *= 0.5
+        rt *= 0.5
     return ( np.pi * (h/3.0) * (rb*rb + rt*rt + rb*rt) )
 
-def frustumVol_diameter(db, dt, h):
-    """This function returns a frustum's volume with diameter inputs
-
-    INPUTS:
-    Parameters
-    ----------
-    db : float (scalar/vector),  base diameter
-    dt : float (scalar/vector),  top diameter
-    h  : float (scalar/vector),  height
-
-    OUTPUTs:
-    -------
-    vol : float (scalar/vector), volume
-    """
-    return frustumVol_radius(0.5*db, 0.5*dt, h)
-
-def frustumCG_radius(rb, rt, h):
-    """This function returns a frustum's center of mass/gravity (centroid) with radii inputs.
+def frustumCG(rb, rt, h, diamFlag=False):
+    """This function returns a frustum's center of mass/gravity (centroid) with radii or diameter inputs.
     NOTE: This is for a SOLID frustum, not a shell
 
     INPUTS:
@@ -77,32 +66,46 @@ def frustumCG_radius(rb, rt, h):
     rb : float (scalar/vector),  base radius
     rt : float (scalar/vector),  top radius
     h  : float (scalar/vector),  height
+    diamFlag : boolean, True if rb and rt are entered as diameters
 
     OUTPUTs:
     -------
     cg : float (scalar/vector),  center of mass/gravity (ventroid)
     """
+    if diamFlag:
+        # Convert diameters to radii
+        rb *= 0.5
+        rt *= 0.5
     return (0.25*h * (rb**2 + 2.*rb*rt + 3.*rt**2) / (rb**2 + rb*rt + rt**2))
 
-def frustumCG_diameter(db, dt, h):
-    """This function returns a frustum's center of mass/gravity (centroid) with diameter inputs.
-    NOTE: This is for a SOLID frustum, not a shell
+def frustumShellVolume(rb, rt, tb, tt, h, diamFlag=False):
+    """This function returns a frustum shell's volume (for computing mass with density) with radii or diameter inputs.
+    NOTE: This is for a frustum SHELL, not a solid
+    NOTE: Input radius here should be average shell radius (assuming wall thickness t<<r) R-0.5*t or (Ro+Ri)/2
 
     INPUTS:
     Parameters
     ----------
-    db : float (scalar/vector),  base diameter
-    dt : float (scalar/vector),  top diameter
+    rb : float (scalar/vector),  base radius
+    rt : float (scalar/vector),  top radius
+    tb : float (scalar/vector),  base thickness
+    tt : float (scalar/vector),  top thickness
     h  : float (scalar/vector),  height
+    diamFlag : boolean, True if rb and rt are entered as diameters
 
     OUTPUTs:
     -------
     cg : float (scalar/vector),  center of mass/gravity (ventroid)
     """
-    return frustumCG_radius(0.5*db, 0.5*dt, h)
+    if diamFlag:
+        # Convert diameters to radii
+        rb *= 0.5
+        rt *= 0.5
+    # Integrate 2*pi*r*t*dz from 0 to H
+    return ( (np.pi*h/3.0) * ( rb*(2*tb + tt) + rt*(tb + 2*tt) ) )
 
-def frustumShellCG_radius(rb, rt, h):
-    """This function returns a frustum's center of mass/gravity (centroid) with radii inputs.
+def frustumShellCG(rb, rt, h, diamFlag=False):
+    """This function returns a frustum's center of mass/gravity (centroid) with radii or diameter inputs.
     NOTE: This is for a frustum SHELL, not a solid
     NOTE: Input radius here should be average shell radius (assuming wall thickness t<<r) R-0.5*t or (Ro+Ri)/2
 
@@ -112,30 +115,17 @@ def frustumShellCG_radius(rb, rt, h):
     rb : float (scalar/vector),  base radius
     rt : float (scalar/vector),  top radius
     h  : float (scalar/vector),  height
+    diamFlag : boolean, True if rb and rt are entered as diameters
 
     OUTPUTs:
     -------
     cg : float (scalar/vector),  center of mass/gravity (ventroid)
     """
+    if diamFlag:
+        # Convert diameters to radii
+        rb *= 0.5
+        rt *= 0.5
     return (h/3 * (rb + 2.*rt) / (rb + rt))
-
-def frustumShellCG_diameter(db, dt, h):
-    """This function returns a frustum's center of mass/gravity (centroid) with diameter inputs.
-    NOTE: This is for a frustum SHELL, not a solid
-    NOTE: Input diameter here should be average shell diameter (assuming wall thickness t<<d) D-t or (Do+Di)/2
-
-    INPUTS:
-    Parameters
-    ----------
-    db : float (scalar/vector),  base diameter
-    dt : float (scalar/vector),  top diameter
-    h  : float (scalar/vector),  height
-
-    OUTPUTs:
-    -------
-    cg : float (scalar/vector),  center of mass/gravity (ventroid)
-    """
-    return frustumShellCG_radius(0.5*db, 0.5*dt, h)
 
 
 if __name__ == '__main__':

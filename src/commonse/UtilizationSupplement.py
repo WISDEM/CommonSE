@@ -3,25 +3,84 @@
 """
 UtilizationSupplement.py
 
-Modified by RRD on 2015-07-14.
 Copyright (c) NREL. All rights reserved.
 """
 
-from math import sqrt, cos, atan2, pi
+from math import atan2
 import numpy as np
 from commonse.utilities import CubicSplineSegment, cubic_spline_eval, smooth_max, smooth_min
+from openmdao.api import Component
 
 #-------------------------------------------------------------------------------
 # Name:        UtilizationSupplement.py
 # Purpose:     It contains functions to calculate utilizations for cylindric members,
 #              for instance tower sections and monopile
 #
-# Author:      ANing/RRD
+# Author:      ANing/RRD/GBarter
 #
 # Created:     07/14/2015 - It is based on towerSupplement.py by ANing, 2012.
 # Copyright:   (c) rdamiani 2015
 # Licence:     <Apache 2015>
 #-------------------------------------------------------------------------------
+
+
+
+class GeometricConstraints(Component):
+    """docstring for OtherConstraints"""
+
+    def __init__(self, nPoints, diamFlag=True):
+
+        super(GeometricConstraints, self).__init__()
+
+        self.diamFlag = diamFlag
+        
+        self.add_param('d', np.zeros(nPoints), units='m')
+        self.add_param('t', np.zeros(nPoints), units='m')
+        self.add_param('min_d_to_t', 120.0)
+        self.add_param('min_taper', 0.4)
+
+        self.add_output('weldability', np.zeros(nPoints))
+        self.add_output('manufacturability', np.zeros(nPoints))
+
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+
+
+    def solve_nonlinear(self, params, unknowns, resids):
+
+        d = params['d']
+        t = params['t']
+
+        # Check if the input was radii instead of diameters and convert if necessary
+        if not self.diamFlag: d *= 2.0
+        
+        min_d_to_t = params['min_d_to_t']
+        min_taper = params['min_taper']
+
+        unknowns['weldability'] = (min_d_to_t-d/t)/min_d_to_t
+        manufacturability = min_taper-d[1:]/d[:-1] #taper ratio
+        unknowns['manufacturability'] = np.r_[manufacturability, manufacturability[-1]]
+    # def list_deriv_vars(self):
+
+    #     inputs = ('d', 't')
+    #     outputs = ('weldability', 'manufacturability')
+    #     return inputs, outputs
+
+    # def provideJ(self):
+
+    #     dw_dd = np.diag(-1.0/self.t/self.min_d_to_t)
+    #     dw_dt = np.diag(self.d/self.t**2/self.min_d_to_t)
+
+    #     dw = np.hstack([dw_dd, dw_dt])
+
+
+
+    #     dm_dd = np.zeros_like(self.d)
+    #     dm_dd[0] = self.d[-1]/self.d[0]**2
+    #     dm_dd[-1] = -1.0/self.d[0]
+
+    #     dm = np.hstack([dm_dd, np.zeros(len(self.t))])
 
 
 def fatigue(M_DEL, N_DEL, d, t, m=4, DC=80.0, eta=1.265, stress_factor=1.0, weld_factor=True):
@@ -85,7 +144,7 @@ def fatigue(M_DEL, N_DEL, d, t, m=4, DC=80.0, eta=1.265, stress_factor=1.0, weld
 
         # stress
         r = d/2.0
-        I = pi*r**3*t
+        I = np.pi*r**3*t
         c = r
         sigma = M_DEL[i]*c/I * stress_factor * 1e3  # convert to N/mm^2
 
@@ -145,8 +204,8 @@ def bucklingGL(d, t, Fz, Myy, tower_height, E, sigma_y, gamma_f=1.2, gamma_b=1.1
     tower_height = tower_height * sk_factor
 
     # geometry
-    A = pi * d * t
-    I = pi * (d/2.0)**3 * t
+    A = np.pi * d * t
+    I = np.pi * (d/2.0)**3 * t
     Wp = I / (d/2.0)
 
     # applied loads
@@ -158,7 +217,7 @@ def bucklingGL(d, t, Fz, Myy, tower_height, E, sigma_y, gamma_f=1.2, gamma_b=1.1
     Mp = Wp * sigma_y / gamma_b
 
     # factors
-    Ne = pi**2 * (E * I) / (1.1 * tower_height**2)
+    Ne = np.pi**2 * (E * I) / (1.1 * tower_height**2)
     lambda_bar = np.sqrt(Np * gamma_b / Ne)
     phi = 0.5 * (1 + alpha*(lambda_bar - 0.2) + lambda_bar**2)
     kappa = np.ones_like(d)
@@ -332,10 +391,10 @@ def _tausmooth(omega, rovert):
     ptR2 = 8.7*rovert + 1
 
     if omega < ptL1:
-        C_tau = sqrt(1.0 + 42.0/omega**3 - 42.0/10**3)
+        C_tau = np.sqrt(1.0 + 42.0/omega**3 - 42.0/10**3)
 
     elif omega >= ptL1 and omega <= ptR1:
-        fL = sqrt(1.0 + 42.0/ptL1**3 - 42.0/10**3)
+        fL = np.sqrt(1.0 + 42.0/ptL1**3 - 42.0/10**3)
         fR = 1.0
         gL = -63.0/ptL1**4/fL
         gR = 0.0
@@ -346,13 +405,13 @@ def _tausmooth(omega, rovert):
 
     elif omega >= ptL2 and omega <= ptR2:
         fL = 1.0
-        fR = 1.0/3.0*sqrt(ptR2/rovert) + 1 - sqrt(8.7)/3
+        fR = 1.0/3.0*np.sqrt(ptR2/rovert) + 1 - np.sqrt(8.7)/3
         gL = 0.0
-        gR = 1.0/6/sqrt(ptR2*rovert)
+        gR = 1.0/6/np.sqrt(ptR2*rovert)
         C_tau = cubic_spline_eval(ptL2, ptR2, fL, fR, gL, gR, omega)
 
     else:
-        C_tau = 1.0/3.0*sqrt(omega/rovert) + 1 - sqrt(8.7)/3
+        C_tau = 1.0/3.0*np.sqrt(omega/rovert) + 1 - np.sqrt(8.7)/3
 
     return C_tau
 
@@ -384,14 +443,14 @@ def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_z
 
     # ----- geometric parameters --------
     beta = atan2(r1-r2, h)
-    L = h/cos(beta)
+    L = h/np.cos(beta)
     t = 0.5*(t1+t2)
 
     # ------------- axial stress -------------
     # length parameter
     le = L
-    re = 0.5*(r1+r2)/cos(beta)
-    omega = le/sqrt(re*t)
+    re = 0.5*(r1+r2)/np.cos(beta)
+    omega = le/np.sqrt(re*t)
     rovert = re/t
 
     # compute Cx
@@ -414,8 +473,8 @@ def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_z
     beta_z = 0.6
     eta_z = 1.0
     Q = 25.0  # quality parameter - high
-    lambda_z = sqrt(sigma_y/sigma_z_Rcr)
-    delta_wk = 1.0/Q*sqrt(rovert)*t
+    lambda_z = np.sqrt(sigma_y/sigma_z_Rcr)
+    delta_wk = 1.0/Q*np.sqrt(rovert)*t
     alpha_z = 0.62/(1 + 1.91*(delta_wk/t)**1.44)
 
     chi_z = _buckling_reduction_factor(alpha_z, beta_z, eta_z, lambda_z0, lambda_z)
@@ -428,8 +487,8 @@ def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_z
 
     # length parameter
     le = L
-    re = 0.5*(r1+r2)/(cos(beta))
-    omega = le/sqrt(re*t)
+    re = 0.5*(r1+r2)/(np.cos(beta))
+    omega = le/np.sqrt(re*t)
     rovert = re/t
 
     # Ctheta = 1.5  # clamped-clamped
@@ -450,7 +509,7 @@ def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_z
     lambda_t0 = 0.4
     beta_t = 0.6
     eta_t = 1.0
-    lambda_t = sqrt(sigma_y/sigma_t_Rcr)
+    lambda_t = np.sqrt(sigma_y/sigma_t_Rcr)
 
     chi_theta = _buckling_reduction_factor(alpha_t, beta_t, eta_t, lambda_t0, lambda_t)
 
@@ -461,31 +520,31 @@ def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_z
 
     # length parameter
     le = h
-    rho = sqrt((r1+r2)/(2.0*r2))
-    re = (1.0 + rho - 1.0/rho)*r2*cos(beta)
-    omega = le/sqrt(re*t)
+    rho = np.sqrt((r1+r2)/(2.0*r2))
+    re = (1.0 + rho - 1.0/rho)*r2*np.cos(beta)
+    omega = le/np.sqrt(re*t)
     rovert = re/t
 
     # if (omega < 10):
-    #     C_tau = sqrt(1.0 + 42.0/omega**3)
+    #     C_tau = np.sqrt(1.0 + 42.0/omega**3)
     # elif (omega > 8.7*rovert):
-    #     C_tau = 1.0/3.0*sqrt(omega/rovert)
+    #     C_tau = 1.0/3.0*np.sqrt(omega/rovert)
     # else:
     #     C_tau = 1.0
     C_tau = _tausmooth(omega, rovert)
 
-    tau_zt_Rcr = 0.75*E*C_tau*sqrt(1.0/omega)/rovert
+    tau_zt_Rcr = 0.75*E*C_tau*np.sqrt(1.0/omega)/rovert
 
     # reduction factor
     alpha_tau = 0.65  # high fabrifaction quality
     beta_tau = 0.6
     lambda_tau0 = 0.4
     eta_tau = 1.0
-    lambda_tau = sqrt(sigma_y/sqrt(3)/tau_zt_Rcr)
+    lambda_tau = np.sqrt(sigma_y/np.sqrt(3)/tau_zt_Rcr)
 
     chi_tau = _buckling_reduction_factor(alpha_tau, beta_tau, eta_tau, lambda_tau0, lambda_tau)
 
-    tau_zt_Rk = chi_tau*sigma_y/sqrt(3)
+    tau_zt_Rk = chi_tau*sigma_y/np.sqrt(3)
     tau_zt_Rd = tau_zt_Rk/gamma_b
 
     # buckling interaction parameters
@@ -512,7 +571,7 @@ def _buckling_reduction_factor(alpha, beta, eta, lambda_0, lambda_bar):
     Computes a buckling reduction factor used in Eurocode shell buckling formula.
     """
 
-    lambda_p = sqrt(alpha/(1.0-beta))
+    lambda_p = np.sqrt(alpha/(1.0-beta))
 
     ptL = 0.9*lambda_0
     ptR = 1.1*lambda_0

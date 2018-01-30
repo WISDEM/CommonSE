@@ -133,19 +133,18 @@ class AeroHydroLoads(Component):
         self.add_param('z', np.zeros(nPoints), units='m', desc='locations along tower')
         self.add_param('yaw', 0.0, units='deg', desc='yaw angle')
 
-
-        self.add_param('outloads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
-        self.add_param('outloads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
-        self.add_param('outloads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
-        self.add_param('outloads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
-        self.add_param('outloads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
-        self.add_param('outloads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
-        self.add_param('outloads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
-        self.add_param('outloads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        self.add_param('outloads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        self.add_param('outloads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        self.add_param('outloads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
-        self.add_param('outloads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+        #self.add_param('outloads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        #self.add_param('outloads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        #self.add_param('outloads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        #self.add_param('outloads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        #self.add_param('outloads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        #self.add_param('outloads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        #self.add_param('outloads:beta', np.zeros(nPoints), units='deg', desc='wind/wave angle relative to inertia c.s.')
+        #self.add_param('outloads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_param('outloads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_param('outloads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_param('outloads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        #self.add_param('outloads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
 
 
         #outputs
@@ -196,7 +195,7 @@ class TowerWindDrag(Component):
         self.add_param('rho', 1.225, units='kg/m**3', desc='air density')
         self.add_param('mu', 1.7934e-5, units='kg/(m*s)', desc='dynamic viscosity of air')
         #TODO not sure what to do here?
-        self.add_param('cd_usr', 1000, desc='User input drag coefficient to override Reynolds number based one')
+        self.add_param('cd_usr', np.inf, desc='User input drag coefficient to override Reynolds number based one')
 
         # out
         self.add_output('windLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
@@ -225,7 +224,7 @@ class TowerWindDrag(Component):
         q = 0.5*rho*U**2
 
         # Reynolds number and drag
-        if params['cd_usr'] == 1000:
+        if params['cd_usr'] == np.inf:
             Re = rho*U*d/mu
             cd, dcd_dRe = cylinderDrag(Re)
         else:
@@ -331,7 +330,7 @@ class TowerWaveDrag(Component):
         self.add_param('mu', 1.3351e-3, units='kg/(m*s)', desc='dynamic viscosity of water')
         self.add_param('cm', 2.0, desc='mass coefficient')
         #TODO not sure what to do here?
-        self.add_param('cd_usr', 0.7, desc='User input drag coefficient to override Reynolds number based one')
+        self.add_param('cd_usr', np.inf, desc='User input drag coefficient to override Reynolds number based one')
 
         # out
         self.add_output('waveLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
@@ -364,13 +363,13 @@ class TowerWaveDrag(Component):
         q0= 0.5*rho*U0**2
 
         # Reynolds number and drag
-        if params['cd_usr']:
+        if params['cd_usr'] == np.inf:
+            Re = rho*U*d/mu
+            cd, dcd_dRe = cylinderDrag(Re)
+        else:
             cd = params['cd_usr']*np.ones_like(d)
             Re = 1.0
             dcd_dRe = 0.0
-        else:
-            Re = rho*U*d/mu
-            cd, dcd_dRe = cylinderDrag(Re)
 
         # inertial and drag forces
         Fi = rho*params['cm']*math.pi/4.0*d**2*params['A']  # Morrison's equation
