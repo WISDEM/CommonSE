@@ -9,6 +9,8 @@ setup(
     author='S. Andrew Ning',
     author_email='andrew.ning@nrel.gov',
     packages=['commonse'],
+    py_modules=['commonse'],
+    package_data: {'commonse': []},
     package_dir={'': 'src'},
     license='Apache License, Version 2.0',
     install_requires=['akima>=1.0'],
