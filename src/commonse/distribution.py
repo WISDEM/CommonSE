@@ -21,6 +21,7 @@ class CDFBase(Component):
         super(CDFBase, self).__init__()
 
         self.add_param('x', shape=nspline,  units='m/s', desc='corresponding reference height')
+        self.add_param('k', shape=1, desc='shape or form factor')
 
         self.add_output('F', shape=nspline, units='m/s', desc='magnitude of wind speed at each z location')
 
@@ -31,7 +32,6 @@ class WeibullCDF(CDFBase):
         """Weibull cumulative distribution function"""
 
         self.add_param('A', shape=1, desc='scale factor')
-        self.add_param('k', shape=1, desc='shape or form factor')
         
 	self.deriv_options['form'] = 'central'
 	self.deriv_options['step_calc'] = 'relative'
@@ -62,7 +62,6 @@ class WeibullWithMeanCDF(CDFBase):
         """Weibull cumulative distribution function"""
 
         self.add_param('xbar', shape=1, desc='mean value of distribution')
-        self.add_param('k', shape=1, desc='shape or form factor')
 
 	self.deriv_options['form'] = 'central'
 	self.deriv_options['step_calc'] = 'relative'
