@@ -29,7 +29,8 @@ class WindBase(Component):
     def __init__(self, nPoints):
 
         super(WindBase, self).__init__()
-
+        self.npts = nPoints
+        
         # TODO: if I put required=True here for Uref there is another bug
 
         # variables
@@ -52,6 +53,7 @@ class WaveBase(Component):
     def __init__(self, nPoints):
 
         super(WaveBase, self).__init__()
+        self.npts = nPoints
 
         # variables
         self.add_param('z', np.zeros(nPoints), units='m', desc='heights where wave speed should be computed')
@@ -112,13 +114,13 @@ class PowerWind(WindBase):
 
         # rename
         z = params['z']
+        if isinstance(z, float) or isinstance(z,np.float_): z=np.array([z])
         zref = params['zref']
         z0 = params['z0']
 
         # velocity
         idx = z > z0
-        n = len(z)
-        unknowns['U'] = np.zeros(n)
+        unknowns['U'] = np.zeros(self.npts)
         unknowns['U'][idx] = params['Uref']*((z[idx] - z0)/(zref - z0))**params['shearExp']
         unknowns['beta'] = params['betaWind']*np.ones_like(z)
 
@@ -139,6 +141,7 @@ class PowerWind(WindBase):
 
         # rename
         z = params['z']
+        if isinstance(z, float) or isinstance(z,np.float_): z=np.array([z])
         zref = params['zref']
         z0 = params['z0']
         shearExp = params['shearExp']
@@ -146,10 +149,9 @@ class PowerWind(WindBase):
         Uref = params['Uref']
 
         # gradients
-        n = len(z)
-        dU_dUref = np.zeros(n)
-        dU_dz = np.zeros(n)
-        dU_dzref = np.zeros(n)
+        dU_dUref = np.zeros(self.npts)
+        dU_dz = np.zeros(self.nts)
+        dU_dzref = np.zeros(self.nts)
 
         idx = z > z0
         dU_dUref[idx] = U[idx]/Uref
@@ -196,6 +198,7 @@ class LogWind(WindBase):
 
         # rename
         z = params['z']
+        if isinstance(z, float) or isinstance(z,np.float_): z=np.array([z])
         zref = params['zref']
         z0 = params['z0']
         z_roughness = params['z_roughness']/1e3  # convert to m
@@ -211,16 +214,15 @@ class LogWind(WindBase):
 
         # rename
         z = params['z']
+        if isinstance(z, float) or isinstance(z,np.float_): z=np.array([z])
         zref = params['zref']
         z0 = params['z0']
         z_roughness = params['z_roughness']/1e3
         Uref = params['Uref']
 
-        n = len(z)
-
-        dU_dUref = np.zeros(n)
-        dU_dz_diag = np.zeros(n)
-        dU_dzref = np.zeros(n)
+        dU_dUref = np.zeros(self.npts)
+        dU_dz_diag = np.zeros(self.npts)
+        dU_dzref = np.zeros(self.npts)
 
         idx = [z - z0 > z_roughness]
         lt = np.log((z[idx] - z0)/z_roughness)
@@ -305,7 +307,7 @@ class LinearWaves(WaveBase):
         dA_dz = omega*dU_dz
         dA_dUc = omega*dU_dUc
 
-        dU0 = np.zeros((1,len(z)))
+        dU0 = np.zeros((1,self.npts))
         dA0 = omega * dU0
 
         J = {}
