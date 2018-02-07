@@ -150,8 +150,8 @@ class PowerWind(WindBase):
 
         # gradients
         dU_dUref = np.zeros(self.npts)
-        dU_dz = np.zeros(self.nts)
-        dU_dzref = np.zeros(self.nts)
+        dU_dz = np.zeros(self.npts)
+        dU_dzref = np.zeros(self.npts)
 
         idx = z > z0
         dU_dUref[idx] = U[idx]/Uref
