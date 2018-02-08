@@ -99,7 +99,7 @@ class Tube:
 
     @property
     def J0(self):  #polar moment of inertia w.r.t. z-z axis (torsional)
-        return (self.D**4-(self.D-2*self.t)**4)* pi/32
+        return (2.0 * self.Jxx)
 
     @property
     def Asy(self): #Shear Area for tubular cross-section
@@ -119,10 +119,17 @@ class Tube:
     def BdgMyy(self):  #Bending modulus for tubular cross-section =BdgMxx
         return self.Jyy / (self.D/2)
 
-
     @property
     def TorsConst(self):  #Torsion shear constant for tubular cross-section
         return self.J0 / (self.D/2)
+
+    @property
+    def S(self):  #Bending modulus for tubular cross-section
+        return self.BdgMxx
+
+    @property
+    def C(self):  #Torsion shear constant for tubular cross-section
+        return self.TorsConst
 
     @property
     def Rgyr(self): #Radius of Gyration for circular tube
