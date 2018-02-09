@@ -129,6 +129,14 @@ def interp_with_deriv(x, xp, yp):
     return y, np.diag(dydx), dydxp, dydyp
 
 
+def assembleI(I):
+    Ixx, Iyy, Izz, Ixy, Ixz, Iyz = I[0], I[1], I[2], I[3], I[4], I[5] 
+    return np.array([[Ixx, Ixy, Ixz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]])
+
+def unassembleI(I):
+    return np.array([I[0, 0], I[1, 1], I[2, 2], I[0, 1], I[0, 2], I[1, 2]])
+
+
 def cubic_with_deriv(x, xp, yp):
     """deprecated"""
 
@@ -308,6 +316,23 @@ def smooth_abs(x, dx=0.01):
 
     return y, dydx
 
+
+
+def nodal2sectional(x):
+    """Averages nodal data to be length-1 vector of sectional data
+
+    INPUTS:
+    ----------
+    x   : float vector, nodal data
+
+    OUTPUTS:
+    -------
+    y   : float vector,  sectional data
+    """
+    y = 0.5*(x[:-1] + x[1:])
+    dy = np.c_[0.5*np.eye(y.size), np.zeros(y.size)]
+    dy[np.arange(y.size), 1+np.arange(y.size)] = 0.5
+    return y, dy
 
 
 def cubic_spline_eval(x1, x2, f1, f2, g1, g2, x):
