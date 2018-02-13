@@ -131,7 +131,7 @@ def frustumIxx(rb, rt, h, diamFlag=False):
     return (A + B)
 
 
-def frustumShellVolume(rb, rt, tb, tt, h, diamFlag=False):
+def frustumShellVol(rb, rt, tb, tt, h, diamFlag=False):
     """This function returns a frustum shell's volume (for computing mass with density) with radii or diameter inputs.
     NOTE: This is for a frustum SHELL, not a solid
 

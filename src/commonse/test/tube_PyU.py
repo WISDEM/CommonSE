@@ -2,10 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 from commonse.tube import Tube, CylindricalShellProperties
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
-from commonse import gravity as g
 npts = 100
 myones = np.ones((npts,))
 

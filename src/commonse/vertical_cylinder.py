@@ -57,29 +57,30 @@ class CylinderMass(Component):
     def __init__(self, nPoints):
         super(CylinderMass, self).__init__()
         
-        self.add_param('d_param', val=np.zeros(nPoints), units='m', desc='cylinder diameter at corresponding locations')
-        self.add_param('t_param', val=np.zeros(nPoints), units='m', desc='shell thickness at corresponding locations')
-        self.add_param('z_param', val=np.zeros(nPoints), units='m', desc='parameterized locations along cylinder, linear lofting between')
-        self.add_param('rho', 0.0, units='kg/m**3', desc='material density')
-        self.add_param('outfitting_factor', val=1.0, desc='Multiplier that accounts for secondary structure mass inside of cylinder')
+        self.add_param('d_full', val=np.zeros(nPoints), units='m', desc='cylinder diameter at corresponding locations')
+        self.add_param('t_full', val=np.zeros(nPoints), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('z_full', val=np.zeros(nPoints), units='m', desc='parameterized locations along cylinder, linear lofting between')
+        self.add_param('material_density', 0.0, units='kg/m**3', desc='material density')
+        self.add_param('outfitting_factor', val=0.0, desc='Multiplier that accounts for secondary structure mass inside of cylinder')
         
-        self.add_output('mass', val=0.0, units='kg', desc='Total cylinder mass')
+        self.add_output('mass', val=np.zeros(nPoints-1), units='kg', desc='Total cylinder mass')
         self.add_output('center_of_mass', val=0.0, units='m', desc='z-position of center of mass of cylinder')
         self.add_output('section_center_of_mass', val=np.zeros(nPoints-1), units='m', desc='z position of center of mass of each can in the cylinder')
         self.add_output('I_base', np.zeros((6,)), units='kg*m**2', desc='mass moment of inertia of cylinder about base [xx yy zz xy xz yz]')
         
     def solve_nonlinear(self, params, unknowns, resids):
         # Unpack variables for thickness and average radius at each can interface
-        Tb = params['t_param'][:-1]
-        Tt = params['t_param'][1:]
-        Rb = 0.5*params['d_param'][:-1]
-        Rt = 0.5*params['d_param'][1:]
-        zz = params['z_param']
-        H  = np.diff(zz)
+        Tb  = params['t_full'][:-1]
+        Tt  = params['t_full'][1:]
+        Rb  = 0.5*params['d_full'][:-1]
+        Rt  = 0.5*params['d_full'][1:]
+        zz  = params['z_full']
+        H   = np.diff(zz)
+        rho = params['material_density'] * params['outfitting_factor']
 
         # Total mass of cylinder
-        V_shell = frustum.frustumShellVolume(Rb, Rt, Tb, Tt, H)
-        unknowns['mass'] = params['outfitting_factor'] * params['rho'] * V_shell.sum()
+        V_shell = frustum.frustumShellVol(Rb, Rt, Tb, Tt, H)
+        unknowns['mass'] = rho * V_shell
         
         # Center of mass of each can/section
         cm_section = zz[:-1] + frustum.frustumShellCG(Rb, Rt, Tb, Tt, H)
@@ -102,7 +103,7 @@ class CylinderMass(Component):
             I_base += Icg + V_shell[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
             
         # All of the mass and volume terms need to be multiplied by density
-        I_base *= params['rho']
+        I_base *= rho
 
         unknowns['I_base'] = unassembleI(I_base)
         

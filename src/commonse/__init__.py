@@ -3,6 +3,6 @@ from utilities import cosd, sind, tand
 from SegIntersect import SegIntersect, CalcDist
 from Material import Material
 from tube import Tube
-from WindWaveDrag import cylinderDrag, TowerWindDrag, TowerWaveDrag
+from WindWaveDrag import AeroHydroLoads, CylinderWindDrag, CylinderWaveDrag
 from enum import Enum
 from constants import gravity, eps

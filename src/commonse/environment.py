@@ -40,11 +40,9 @@ class WindBase(Component):
 
         # parameters
         self.add_param('z0', 0.0, units='m', desc='bottom of wind profile (height of ground/sea)')
-        self.add_param('betaWind', 0.0, units='deg', desc='wind angle relative to inertial coordinate system')
 
         # out
         self.add_output('U', np.zeros(nPoints), units='m/s', desc='magnitude of wind speed at each z location')
-        self.add_output('beta', np.zeros(nPoints), units='deg', desc='corresponding wind angles relative to inertial coordinate system')
 
 
 class WaveBase(Component):
@@ -56,28 +54,31 @@ class WaveBase(Component):
         self.npts = nPoints
 
         # variables
+        self.add_param('rho', 0.0, units='kg/m**3', desc='water density')
         self.add_param('z', np.zeros(nPoints), units='m', desc='heights where wave speed should be computed')
         self.add_param('z_surface', 0.0, units='m', desc='vertical location of water surface')
         self.add_param('z_floor', 0.0, units='m', desc='vertical location of sea floor')
 
         # out
-        self.add_output('U', np.zeros(nPoints), units='m/s', desc='magnitude of wave speed at each z location')
-        self.add_output('A', np.zeros(nPoints), units='m/s**2', desc='magnitude of wave acceleration at each z location')
-        self.add_output('beta', np.zeros(nPoints), units='deg', desc='corresponding wave angles relative to inertial coordinate system')
-        self.add_output('U0', 0.0, units='m/s', desc='magnitude of wave speed at z=MSL')
-        self.add_output('A0', 0.0, units='m/s**2', desc='magnitude of wave acceleration at z=MSL')
-        self.add_output('beta0', 0.0, units='deg', desc='corresponding wave angles relative to inertial coordinate system at z=MSL')
+        self.add_output('U', np.zeros(nPoints), units='m/s', desc='horizontal wave velocity at each z location')
+        self.add_output('W', np.zeros(nPoints), units='m/s', desc='vertical wave velocity at each z location')
+        self.add_output('V', np.zeros(nPoints), units='m/s', desc='total wave velocity at each z location')
+        self.add_output('A', np.zeros(nPoints), units='m/s**2', desc='horizontal wave acceleration at each z location')
+        self.add_output('p', np.zeros(nPoints), units='N/m**2', desc='pressure oscillation at each z location')
+        #self.add_output('U0', 0.0, units='m/s', desc='magnitude of wave speed at z=MSL')
+        #self.add_output('A0', 0.0, units='m/s**2', desc='magnitude of wave acceleration at z=MSL')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
         """default to no waves"""
         n = len(params['z'])
         unknowns['U'] = np.zeros(n)
+        unknowns['W'] = np.zeros(n)
+        unknowns['V'] = np.zeros(n)
         unknowns['A'] = np.zeros(n)
-        unknowns['beta'] = np.zeros(n)
-        unknowns['U0'] = 0.
-        unknowns['A0'] = 0.
-        unknowns['beta0'] = 0.
+        unknowns['p'] = np.zeros(n)
+        #unknowns['U0'] = 0.
+        #unknowns['A0'] = 0.
 
 
 
@@ -107,7 +108,7 @@ class PowerWind(WindBase):
         super(PowerWind, self).__init__(nPoints)
 
         # parameters
-        self.add_param('shearExp', 0.2, desc='shear exponent')
+        self.add_param('shearExp', 0.0, desc='shear exponent')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -122,7 +123,6 @@ class PowerWind(WindBase):
         idx = z > z0
         unknowns['U'] = np.zeros(self.npts)
         unknowns['U'][idx] = params['Uref']*((z[idx] - z0)/(zref - z0))**params['shearExp']
-        unknowns['beta'] = params['betaWind']*np.ones_like(z)
 
         # # add small cubic spline to allow continuity in gradient
         # k = 0.01  # fraction of profile with cubic spline
@@ -191,7 +191,7 @@ class LogWind(WindBase):
         super(LogWind, self).__init__(nPoints)
 
         # parameters
-        self.add_param('z_roughness', 10.0, units='mm', desc='surface roughness length')
+        self.add_param('z_roughness', 0.0, units='mm', desc='surface roughness length')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -207,7 +207,6 @@ class LogWind(WindBase):
         idx = [z - z0 > z_roughness]
         unknowns['U'] = np.zeros_like(z)
         unknowns['U'][idx] = params['Uref']*np.log((z[idx] - z0)/z_roughness) / math.log((zref - z0)/z_roughness)
-        unknowns['beta'] = params['betaWind']*np.ones_like(z)
 
 
     def linearize(self, params, unknowns, resids):
@@ -253,14 +252,14 @@ class LinearWaves(WaveBase):
         # parameters
         self.add_param('hmax', 0.0, units='m', desc='maximum wave height (crest-to-trough)')
         self.add_param('T', 0.0, units='s', desc='period of maximum wave height')
-        self.add_param('g', gravity, units='m/s**2', desc='acceleration of gravity')
-        self.add_param('betaWave', 0.0, units='deg', desc='wave angle relative to inertial coordinate system')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
 
         # water depth
-        d = params['z_surface']-params['z_floor']
+        z_floor = params['z_floor']
+        if z_floor > 0.0: z_floor *= -1.0
+        d = params['z_surface']-z_floor
 
         # design wave height
         h = params['hmax']
@@ -269,56 +268,86 @@ class LinearWaves(WaveBase):
         omega = 2.0*math.pi/params['T']
 
         # compute wave number from dispersion relationship
-        k = brentq(lambda k: omega**2 - params['g']*k*math.tanh(d*k), 0, 10*omega**2/params['g'])
-
+        k = brentq(lambda k: omega**2 - gravity*k*math.tanh(d*k), 0, 10*omega**2/gravity)
+        self.k = k
         # zero at surface
         z_rel = params['z'] - params['z_surface']
 
+        # Amplitude
+        a = 0.5 * h
+        
         # maximum velocity
-        unknowns['U'] = h/2.0*omega*np.cosh(k*(z_rel + d))/math.sinh(k*d) + params['Uc']
-        unknowns['U0'] = h/2.0*omega*np.cosh(k*(0. + d))/math.sinh(k*d) + params['Uc']
-
-        # check heights
-        unknowns['U'][np.logical_or(params['z'] < params['z_floor'], params['z'] > params['z_surface'])] = 0.
+        unknowns['U'] = a*omega*np.cosh(k*(z_rel + d))/np.sinh(k*d) + params['Uc']
+        unknowns['W'] = -a*omega*np.sinh(k*(z_rel + d))/np.sinh(k*d)
+        unknowns['V'] = np.sqrt(unknowns['U']**2.0 + unknowns['W']**2.0)
+        #unknowns['U0'] = a*omega*np.cosh(k*(0. + d))/np.sinh(k*d) + params['Uc']
 
         # acceleration
-        unknowns['A']  = unknowns['U'] * omega
-        unknowns['A0'] = unknowns['U0'] * omega
-        # angles
-        unknowns['beta'] = params['betaWave']*np.ones_like(params['z'])
-        unknowns['beta0'] = params['betaWave']
+        unknowns['A']  = (unknowns['U'] - params['Uc']) * omega
+        #unknowns['A0'] = (unknowns['U0'] - params['Uc']) * omega
 
+        # Pressure oscillation is just sum of static and dynamic contributions
+        # Hydrostatic is simple rho * g * z
+        # Dynamic is from standard solution to Airy (Potential Flow) Wave theory
+        # Full pressure would also include standard dynamic head (0.5*rho*V^2)
+        unknowns['p'] = params['rho'] * gravity * (a * np.cosh(k*(z_rel + d)) / np.cosh(k*d) - z_rel)
+
+        # check heights
+        idx = np.logical_or(params['z'] < z_floor, params['z'] > params['z_surface'])
+        unknowns['U'][idx] = 0.0
+        unknowns['W'][idx] = 0.0
+        unknowns['V'][idx] = 0.0
+        unknowns['A'][idx] = 0.0
+        unknowns['p'][idx] = 0.0
 
     def linearize(self, params, unknowns, resids):
         # rename
+        z_floor = params['z_floor']
+        if z_floor > 0.0: z_floor *= -1.0
         z = params['z']
-        d = params['z_surface']-params['z_floor']
+        d = params['z_surface']-z_floor
         h = params['hmax']
         omega = 2.0*math.pi/params['T']
-        k = brentq(lambda k: omega**2 - params['g']*k*math.tanh(d*k), 0, 10*omega**2/params['g'])
+        k = self.k
         z_rel = z - params['z_surface']
 
         # derivatives
-        dU_dz = h/2.0*omega*np.sinh(k*(z_rel + d))/math.sinh(k*d)*k
+        dU_dz = h/2.0*omega*np.sinh(k*(z_rel + d))/np.sinh(k*d)*k
         dU_dUc = np.ones_like(z)
-        idx = np.logical_or(z < params['z_floor'], z > params['z_surface'])
-        dU_dz[idx] = 0.0
-        dU_dUc[idx] = 0.0
+        dW_dz = -h/2.0*omega*np.cosh(k*(z_rel + d))/np.sinh(k*d)*k
+        dV_dz = 0.5/unknowns['V']*(2*unknowns['U']*dU_dz +2*unknowns['W']*dW_dz)
+        dV_dUc = 0.5/unknowns['V']*(2*unknowns['U']*dU_dUc)
         dA_dz = omega*dU_dz
-        dA_dUc = omega*dU_dUc
+        dA_dUc = 0.0 #omega*dU_dUc
+        dp_dz = params['rho'] * gravity * (a*np.sinh(k*(z_rel + d))*k / np.cosh(k*d) - 1.0)
 
-        dU0 = np.zeros((1,self.npts))
-        dA0 = omega * dU0
+        idx = np.logical_or(z < z_floor, z > params['z_surface'])
+        dU_dz[idx] = 0.0
+        dW_dz[idx] = 0.0
+        dV_dz[idx] = 0.0
+        dA_dz[idx] = 0.0
+        dp_dz[idx] = 0.0
+        dU_dUc[idx] = 0.0
+        dV_dUc[idx] = 0.0
+        
+        #dU0 = np.zeros((1,self.npts))
+        #dA0 = omega * dU0
 
         J = {}
         J['U', 'z'] = np.diag(dU_dz)
         J['U', 'Uc'] = dU_dUc
+        J['W', 'z'] = np.diag(dW_dz)
+        J['W', 'Uc'] = 0.0
+        J['V', 'z'] = np.diag(dV_dz)
+        J['V', 'Uc'] = 0.0
         J['A', 'z'] = np.diag(dA_dz)
-        J['A', 'Uc'] = dA_dUc
-        J['U0', 'z'] = dU0
-        J['U0', 'Uc'] = 1.0
-        J['A0', 'z'] = dA0
-        J['A0', 'Uc'] = 1.0
+        J['A', 'Uc'] = 0.0
+        J['p', 'z'] = np.diag(dp_dz)
+        J['p', 'Uc'] = 0.0
+        #J['U0', 'z'] = dU0
+        #J['U0', 'Uc'] = 1.0
+        #J['A0', 'z'] = dA0
+        #J['A0', 'Uc'] = 1.0
 
         return J
 
@@ -451,7 +480,6 @@ if __name__ == '__main__':
     prob['p1.z0'] = 1.0
 
     prob['p1.shearExp'] = 0.2
-    prob['p1.betaWind'] = 0.0
 
     prob.run()
 
@@ -486,7 +514,6 @@ if __name__ == '__main__':
     prob['p1.z0'] = 1.0
 
     #prob['p1.shearExp'] = 0.2
-    prob['p1.betaWind'] = 0.0
 
     prob.run()
     #Jlog = prob.check_total_derivatives(out_stream=None)
