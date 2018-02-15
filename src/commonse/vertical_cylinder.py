@@ -5,7 +5,7 @@ from commonse.tube import CylindricalShellProperties
 
 from commonse import gravity, eps
 import commonse.frustum as frustum
-from commonse.UtilizationSupplement import hoopStressEurocode
+from commonse.UtilizationSupplement import hoopStressEurocode, hoopStress
 from commonse.utilities import assembleI, unassembleI
 import pyframe3dd.frame3dd as frame3dd
 
@@ -296,16 +296,12 @@ class CylinderFrame3DD(Component):
 
         # trapezoidally distributed loads
         EL = np.arange(1, n)
-        xx1 = np.zeros(n-1)
-        xx2 = z[1:] - z[:-1] - np.ones(n-1)*1e-6  # subtract small number b.c. of precision
+        xx1 = xy1 = xz1 = np.zeros(n-1)
+        xx2 = xy2 = xz2 = np.diff(z) - 1e-6  # subtract small number b.c. of precision
         wx1 = Px[:-1]
         wx2 = Px[1:]
-        xy1 = np.zeros(n-1)
-        xy2 = z[1:] - z[:-1] - np.ones(n-1)*1e-6
         wy1 = Py[:-1]
         wy2 = Py[1:]
-        xz1 = np.zeros(n-1)
-        xz2 = z[1:] - z[:-1] - np.ones(n-1)*1e-6
         wz1 = Pz[:-1]
         wz2 = Pz[1:]
 
@@ -328,7 +324,6 @@ class CylinderFrame3DD(Component):
         # deflections due to loading (from cylinder top and wind/wave loads)
         unknowns['top_deflection'] = displacements.dx[iCase, n-1]  # in yaw-aligned direction
 
-
         # shear and bending (convert from local to global c.s.)
         Fz = forces.Nx[iCase, :]
         Vy = forces.Vy[iCase, :]
@@ -339,18 +334,18 @@ class CylinderFrame3DD(Component):
         Mxx = -forces.Mzz[iCase, :]
 
         # one per element (first negative b.c. need reaction)
-        Fz = np.concatenate([[-Fz[0]], Fz[1::2]])
-        Vx = np.concatenate([[-Vx[0]], Vx[1::2]])
-        Vy = np.concatenate([[-Vy[0]], Vy[1::2]])
+        Fz = np.r_[-reactions.Fz.sum(), Fz[1::2]]
+        Vy = np.r_[-reactions.Fy.sum(), Vy[1::2]]
+        Vx = np.r_[-reactions.Fx.sum(), Vx[1::2]]
 
-        Mzz = np.concatenate([[-Mzz[0]], Mzz[1::2]])
-        Myy = np.concatenate([[-Myy[0]], Myy[1::2]])
-        Mxx = np.concatenate([[-Mxx[0]], Mxx[1::2]])
+        Mzz = np.r_[-reactions.Mzz.sum(), Mzz[1::2]]
+        Myy = np.r_[-reactions.Myy.sum(), Myy[1::2]]
+        Mxx = np.r_[-reactions.Mxx.sum(), Mxx[1::2]]
 
         # Record total forces and moments
         unknowns['base_F'] = np.array([Vx[0], Vy[0], Fz[0]])
         unknowns['base_M'] = np.array([Mxx[0], Myy[0], Mzz[0]])
-        
+
         unknowns['Fz_out']  = Fz
         unknowns['Vx_out']  = Vx
         unknowns['Vy_out']  = Vy
@@ -373,4 +368,4 @@ class CylinderFrame3DD(Component):
         unknowns['hoop_stress_euro'] = hoopStressEurocode(params['z'], params['d'], params['t'], L_reinforced, params['qdyn'])
 
         # Simpler hoop stress used in API calculations
-        unknowns['hoop_stress'] = params['qdyn'] * (0.5*params['d']) / params['t']
+        unknowns['hoop_stress'] = hoopStress(params['d'], params['t'], params['qdyn'])
