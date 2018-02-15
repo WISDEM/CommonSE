@@ -179,6 +179,9 @@ def vonMisesStressUtilization(axial_stress, hoop_stress, shear_stress, gamma, si
 
     return stress_utilization  # This must be <1 to pass
 
+def hoopStress(d, t, q_dyn):
+    r = d/2.0-t/2.0  # radius of cylinder middle surface
+    return (-q_dyn * r / t)
 
 def hoopStressEurocode(z, d, t, L_reinforced, q_dyn):
     """default method for computing hoop stress using Eurocode method"""
@@ -191,9 +194,7 @@ def hoopStressEurocode(z, d, t, L_reinforced, q_dyn):
     kw = smooth_max(k_w, 0.65)
     kw = smooth_min(k_w, 1.0)
     Peq = k_w*q_dyn
-    hoop_stress = -Peq*r/t
-
-    return hoop_stress
+    return hoopStress(d, t, Peq)
 
 
 def bucklingGL(d, t, Fz, Myy, tower_height, E, sigma_y, gamma_f=1.2, gamma_b=1.1, gamma_g=1.1):
