@@ -734,11 +734,11 @@ def _compute_stiffener_factors(pressure, axial_stress, R_od, t_wall, h_web, t_we
     D    = E * t_wall**3 / (12.0 * (1 - nu*nu))
     beta = (0.25 * E * t_wall / R_od**2 / D)**0.25
     # Compute psi-factor (just a local term used here)
-    u     = 0.5 * beta * L_stiffener
+    u     = np.minimum(0.5 * beta * L_stiffener, 30.0)
     psi_k = 2.0 * (np.sin(u)*np.cosh(u) + np.cos(u)*np.sinh(u)) / (np.sinh(2*u) + np.sin(2*u)) 
 
     # Compute a couple of other local terms
-    u   = beta * L_stiffener
+    u   = np.minimum(beta * L_stiffener, 50.0)
     k_t = 8 * beta**3 * D * (np.cosh(u) - np.cos(u)) / (np.sinh(u) + np.sin(u))
     k_d = E * t_stiff * (R_od**2 - R_flange**2) / R_od / ((1+nu)*R_od**2 + (1-nu)*R_flange**2)
 
