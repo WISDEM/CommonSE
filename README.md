@@ -4,7 +4,7 @@ Author: [S. Andrew Ning, R. Damiani, and K. Dykes](mailto:nrel.wisdem+commonse@g
 
 ## Version
 
-This software is a beta version 0.1.2.
+This software is a beta version 0.1.3.
 
 ## Detailed Documentation
 
