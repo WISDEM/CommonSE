@@ -738,14 +738,14 @@ def _compute_stiffener_factors(pressure, axial_stress, R_od, t_wall, h_web, t_we
     psi_k = 2.0 * (np.sin(u)*np.cosh(u) + np.cos(u)*np.sinh(u)) / (np.sinh(2*u) + np.sin(2*u)) 
 
     # Compute a couple of other local terms
-    u   = np.minimum(beta * L_stiffener, 50.0)
+    u   = np.minimum(beta * L_stiffener, 30.0)
     k_t = 8 * beta**3 * D * (np.cosh(u) - np.cos(u)) / (np.sinh(u) + np.sin(u))
     k_d = E * t_stiff * (R_od**2 - R_flange**2) / R_od / ((1+nu)*R_od**2 + (1-nu)*R_flange**2)
 
     # Pressure from axial load
     pressure_sigma = pressure - nu*axial_stress*t_wall/R_od
 
-    # Compute the correct ion to hoop stress due to the presesnce of ring stiffeners
+    # Compute the correction to hoop stress due to the presesnce of ring stiffeners
     stiffener_factor_KthL = 1 - psi_k * (pressure_sigma / pressure) * (k_d / (k_d + k_t))
     stiffener_factor_KthG = 1 -         (pressure_sigma / pressure) * (k_d / (k_d + k_t))
     return stiffener_factor_KthL, stiffener_factor_KthG
