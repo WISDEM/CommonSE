@@ -24,8 +24,8 @@ class CylinderDiscretization(Component):
         
         super(CylinderDiscretization, self).__init__()
 
-        self.nRefine = nRefine
-        nFull = nRefine * (nPoints-1) + 1
+        self.nRefine = np.round(nRefine)
+        nFull = self.nRefine * (nPoints-1) + 1
         
          # variables
         self.add_param('section_height', np.zeros(nPoints-1), units='m', desc='parameterized section heights along cylinder')

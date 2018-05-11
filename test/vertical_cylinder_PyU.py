@@ -7,6 +7,41 @@ from commonse.utilities import nodal2sectional
 npts = 100
 myones = np.ones((npts,))
 
+class TestDiscretization(unittest.TestCase):
+    def setUp(self):
+        self.params = {}
+        self.unknowns = {}
+        self.resid = None
+
+        self.params['section_height'] = np.arange(1,5)
+        self.params['diameter'] = 5.0 * np.ones(5)
+        self.params['wall_thickness'] = 0.05 * np.ones(5)
+
+    def testRefine2(self):
+        mydis = vc.CylinderDiscretization(5, 2)
+        mydis.solve_nonlinear(self.params, self.unknowns, self.resid)
+        npt.assert_array_equal(self.unknowns['z_param'], np.array([0.0, 1.0, 3.0, 6.0, 10.0]))
+        npt.assert_array_equal(self.unknowns['z_full'], np.array([0.0, 0.5, 1.0, 2.0, 3.0, 4.5, 6.0, 8.0, 10.0]))
+        npt.assert_array_equal(self.unknowns['d_full'], 5.0)
+        npt.assert_array_equal(self.unknowns['t_full'], 0.05)
+
+    def testRefine3(self):
+        mydis = vc.CylinderDiscretization(5, 3)
+        mydis.solve_nonlinear(self.params, self.unknowns, self.resid)
+        for k in self.unknowns['z_param']:
+            self.assertIn(k, self.unknowns['z_full'])
+            
+    def testRefineInterp(self):
+        self.params['diameter'] = np.array([5.0, 5.0, 6.0, 7.0, 7.0])
+        self.params['wall_thickness'] = 1e-2 * np.array([5.0, 5.0, 6.0, 7.0, 7.0])
+        mydis = vc.CylinderDiscretization(5, 2)
+        mydis.solve_nonlinear(self.params, self.unknowns, self.resid)
+        npt.assert_array_equal(self.unknowns['z_param'], np.array([0.0, 1.0, 3.0, 6.0, 10.0]))
+        npt.assert_array_equal(self.unknowns['z_full'], np.array([0.0, 0.5, 1.0, 2.0, 3.0, 4.5, 6.0, 8.0, 10.0]))
+        npt.assert_array_equal(self.unknowns['d_full'], np.array([5.0, 5.0, 5.0, 5.5, 6.0, 6.5, 7.0, 7.0, 7.0]))
+        npt.assert_array_equal(self.unknowns['t_full'], 1e-2*np.array([5.0, 5.0, 5.0, 5.5, 6.0, 6.5, 7.0, 7.0, 7.0]))
+
+                               
 class TestMass(unittest.TestCase):
     def setUp(self):
         self.params = {}
@@ -52,6 +87,7 @@ class TestMass(unittest.TestCase):
         
 def suite():
     suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestDiscretization))
     suite.addTest(unittest.makeSuite(TestMass))
     return suite
 
