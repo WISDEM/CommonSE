@@ -20,11 +20,12 @@ class CylinderDiscretization(Component):
 
     #inputs
 
-    def __init__(self, nPoints, nFull):
+    def __init__(self, nPoints, nRefine):
         
         super(CylinderDiscretization, self).__init__()
 
-        self.nFull = nFull
+        self.nRefine = nRefine
+        nFull = nRefine * (nPoints-1) + 1
         
          # variables
         self.add_param('section_height', np.zeros(nPoints-1), units='m', desc='parameterized section heights along cylinder')
@@ -47,7 +48,11 @@ class CylinderDiscretization(Component):
     def solve_nonlinear(self, params, unknowns, resids):
 
         unknowns['z_param'] = np.r_[0.0, np.cumsum(params['section_height'])]
-        unknowns['z_full']  = np.linspace(unknowns['z_param'][0], unknowns['z_param'][-1], self.nFull) 
+        z_full = np.array([])
+        for k in range(unknowns['z_param'].size-1):
+            zref = np.linspace(unknowns['z_param'][k], unknowns['z_param'][k+1], self.nRefine+1)
+            z_full = np.append(z_full, zref)
+        unknowns['z_full']  = np.unique(z_full) #np.linspace(unknowns['z_param'][0], unknowns['z_param'][-1], self.nFull) 
         unknowns['d_full']  = np.interp(unknowns['z_full'], unknowns['z_param'], params['diameter'])
         unknowns['t_full']  = np.interp(unknowns['z_full'], unknowns['z_param'], params['wall_thickness'])
         
