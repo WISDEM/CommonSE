@@ -897,11 +897,6 @@ def _safety_factor(Ficj, yield_stress):
 def shellBuckling_withStiffeners(P, sigma_ax, R_od, t_wall, h_section, h_web, t_web, w_flange, t_flange,
                                  L_stiffener, E, nu, sigma_y, loading='hydro'):
 
-    # Apply quick "compactness" check on stiffener geometry
-    # Constraint is that these must be >= 1
-    flange_compactness = 0.375 * (t_flange / (0.5*w_flange)) * np.sqrt(E / sigma_y)
-    web_compactness    = 1.0   * (t_web    / h_web         ) * np.sqrt(E / sigma_y)
-
     # APPLIED STRESSES (Section 11 of API Bulletin 2U)
     stiffener_factor_KthL, stiffener_factor_KthG = _compute_stiffener_factors(P, sigma_ax, R_od, t_wall, h_web, t_web,
                                                                               w_flange, t_flange, L_stiffener, E, nu)
@@ -922,7 +917,7 @@ def shellBuckling_withStiffeners(P, sigma_ax, R_od, t_wall, h_section, h_web, t_
 
     # COMBINE AXIAL AND HOOP (EXTERNAL PRESSURE) LOADS TO FIND DESIGN LIMITS
     # (Section 6 of API Bulletin 2U)
-    load_per_length_Nph = sigma_ax               * t_wall
+    load_per_length_Nph = sigma_ax            * t_wall
     load_per_length_Nth = hoop_stress_nostiff * t_wall
     load_ratio_k        = load_per_length_Nph / load_per_length_Nth
     def solveFthFph(Fxci, Frci, Kth):
@@ -952,9 +947,16 @@ def shellBuckling_withStiffeners(P, sigma_ax, R_od, t_wall, h_section, h_web, t_
     # Compare limits to applied stresses and use this ratio as a design constraint
     # (Section 9 "Allowable Stresses" of API Bulletin 2U)
     # These values must be <= 1.0
-    axial_local_unity      = sigma_ax / axial_limit_local_FaL
-    axial_general_unity    = sigma_ax / axial_limit_general_FaG
-    external_local_unity   = hoop_stress_between / extern_limit_local_FthL
-    external_general_unity = hoop_stress_between / extern_limit_general_FthG
+    axial_local_api      = sigma_ax / axial_limit_local_FaL
+    axial_general_api    = sigma_ax / axial_limit_general_FaG
+    external_local_api   = hoop_stress_between / extern_limit_local_FthL
+    external_general_api = hoop_stress_between / extern_limit_general_FthG
 
-    return (flange_compactness, web_compactness, axial_local_unity, axial_general_unity, external_local_unity, external_general_unity)
+    # Compute unification ratios without safety factors in case we want to apply our own later
+    axial_local_raw      = sigma_ax / inelastic_local_FphcL
+    axial_general_raw    = sigma_ax / inelastic_general_FphcG
+    external_local_raw   = hoop_stress_between / inelastic_local_FthcL
+    external_general_raw = hoop_stress_between / inelastic_general_FthcG
+    
+    return (axial_local_api, axial_general_api, external_local_api, external_general_api,
+            axial_local_raw, axial_general_raw, external_local_raw, external_general_raw)
