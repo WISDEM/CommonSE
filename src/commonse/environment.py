@@ -268,7 +268,7 @@ class LinearWaves(WaveBase):
         omega = 2.0*math.pi/params['T']
 
         # compute wave number from dispersion relationship
-        k = brentq(lambda k: omega**2 - gravity*k*math.tanh(d*k), 0, 10*omega**2/gravity)
+        k = brentq(lambda k: omega**2 - gravity*k*math.tanh(d*k), 0, 1e3*omega**2/gravity)
         self.k = k
         # zero at surface
         z_rel = params['z'] - params['z_surface']
