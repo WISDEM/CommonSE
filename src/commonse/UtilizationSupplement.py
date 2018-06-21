@@ -184,7 +184,11 @@ def hoopStress(d, t, q_dyn):
     return (-q_dyn * r / t)
 
 def hoopStressEurocode(z, d, t, L_reinforced, q_dyn):
-    """default method for computing hoop stress using Eurocode method"""
+    """default method for computing hoop stress using Eurocode method
+       GB 06/21/2018: Ansys comparisons for submerged case suggests this over-compensates for stiffener
+                      I'm not even sure the Eurocode is implemented correctly here.  Suggest using the standard
+                      hoop stress expression above or API's handling of ring stiffeners below.
+    """
 
     r = d/2.0-t/2.0  # radius of cylinder middle surface
     omega = L_reinforced/np.sqrt(r*t)
@@ -903,7 +907,7 @@ def shellBuckling_withStiffeners(P, sigma_ax, R_od, t_wall, h_section, h_web, t_
     hoop_stress_nostiff = _compute_applied_hoop(P, R_od, t_wall)
     hoop_stress_between = hoop_stress_nostiff * stiffener_factor_KthL
     hoop_stress_atring  = hoop_stress_nostiff * stiffener_factor_KthG
-
+    
     # BUCKLING FAILURE STRESSES (Section 4 of API Bulletin 2U)
     (elastic_axial_local_FxeL, elastic_extern_local_FreL,
      elastic_axial_general_FxeG, elastic_extern_general_FreG) = _compute_elastic_stress_limits(R_od, t_wall, h_section, h_web,
