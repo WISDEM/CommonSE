@@ -1,7 +1,7 @@
 from openmdao.api import Group, Component
 from csystem import DirectionVector
 from utilities import interp_with_deriv
-
+from commonse import NFREQ
 import numpy as np
 
 
@@ -9,25 +9,22 @@ class TowerModes(Component):
     def __init__(self):
         super(TowerModes, self).__init__()
 
-        self.add_param('tower_f1', val=0.0, units='Hz', desc='First natural frequency of tower (and substructure)')
-        self.add_param('tower_f2', val=0.0, units='Hz', desc='Second natural frequency of tower (and substructure)')
+        self.add_param('tower_freq', val=np.zeros(NFREQ), units='Hz', desc='First natural frequencies of tower (and substructure)')
         self.add_param('rotor_omega', val=0.0, units='rpm', desc='rated rotor rotation speed')
         self.add_param('gamma_freq', val=0.0, desc='partial safety factor for fatigue')
         self.add_param('blade_number', 3, desc='number of rotor blades', pass_by_obj=True)
 
-        self.add_output('frequency_ratio', val=np.zeros(2), desc='ratio of tower frequency to blade passing frequency with margin')
+        self.add_output('frequency_ratio', val=np.zeros(NFREQ), desc='ratio of tower frequency to blade passing frequency with margin')
 
     def solve_nonlinear(self, params, unknowns, resids):
-        freq_vec = np.array([ params['tower_f1'], params['tower_f2'] ])
-        unknowns['frequency_ratio'] = params['gamma_freq'] * (params['rotor_omega']/60.0) * params['blade_number'] / freq_vec
+        unknowns['frequency_ratio'] = params['gamma_freq'] * (params['rotor_omega']/60.0) * params['blade_number'] / params['tower_freq']
 
     def linearize(self, params, unknowns, resids):
         J = {}
-        J['frequency_ratio', 'gamma_freq']   =  unknowns['frequency_ratio']    / params['gamma_freq']
-        J['frequency_ratio', 'rotor_omega']  =  unknowns['frequency_ratio']    / params['rotor_omega']
-        J['frequency_ratio', 'blade_number'] =  unknowns['frequency_ratio']    / params['blade_number']
-        J['frequency_ratio', 'tower_f1']     = -unknowns['frequency_ratio'][0] / params['tower_f1']
-        J['frequency_ratio', 'tower_f2']     = -unknowns['frequency_ratio'][1] / params['tower_f2']
+        J['frequency_ratio', 'gamma_freq']   =  unknowns['frequency_ratio'] / params['gamma_freq']
+        J['frequency_ratio', 'rotor_omega']  =  unknowns['frequency_ratio'] / params['rotor_omega']
+        J['frequency_ratio', 'blade_number'] =  unknowns['frequency_ratio'] / params['blade_number']
+        J['frequency_ratio', 'tower_freq']   = -unknowns['frequency_ratio'] / params['tower_freq']
         return J
 
     
