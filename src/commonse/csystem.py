@@ -10,6 +10,21 @@ Copyright (c) NREL. All rights reserved.
 import numpy as np
 
 
+def rotMat_z(a):
+    return np.asmatrix( np.array([[np.cos(a), -np.sin(a), 0.0],
+                                  [np.sin(a),  np.cos(a), 0.0],
+                                  [0.0,        0.0,       1.0]]) )
+
+def rotMat_y(a):
+    return np.asmatrix( np.array([[ np.cos(a), 0.0, np.sin(a)],
+                                  [0.0,        1.0,       0.0],
+                                  [-np.sin(a), 0.0, np.cos(a)] ]) )
+
+def rotMat_x(a):
+    return np.asmatrix( np.array([[1.0, 0.0,              0.0],
+                                  [0.0, np.cos(a), -np.sin(a)],
+                                  [0.0, np.sin(a),  np.cos(a)]]) )
+
 # # !!!!!!!! NOTE ALL ANGLES SHOULD BE PASSED IN DEGREES !!!!!!!!!!!!!!
 # def _rotateAboutZ(x, y, z, theta):
 #     """
