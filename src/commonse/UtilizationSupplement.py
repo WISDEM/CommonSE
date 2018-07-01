@@ -8,6 +8,7 @@ Copyright (c) NREL. All rights reserved.
 
 from math import atan2
 import numpy as np
+from commonse.constants import eps
 from commonse.utilities import CubicSplineSegment, cubic_spline_eval, smooth_max, smooth_min
 from openmdao.api import Component
 from scipy.optimize import brentq, minimize_scalar
@@ -508,7 +509,7 @@ def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_z
     # else:
     #     sigma_t_Rcr = 0.92*E*Ctheta/omega/rovert
 
-    sigma_t_Rcr = _sigmasmooth(omega, E, rovert)
+    sigma_t_Rcr = np.maximum(eps, _sigmasmooth(omega, E, rovert))
 
     # buckling reduction factor
     alpha_t = 0.65  # high fabrication quality
