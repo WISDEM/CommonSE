@@ -92,18 +92,18 @@ class AeroHydroLoads(Component):
         #self.add_param('windLoads_beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
 
 
-        self.add_param('waveLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
-        self.add_param('waveLoads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
-        self.add_param('waveLoads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
-        self.add_param('waveLoads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
-        self.add_param('waveLoads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
-        self.add_param('waveLoads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
-        self.add_param('waveLoads:beta', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
-        #self.add_param('waveLoads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        #self.add_param('waveLoads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        #self.add_param('waveLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        #self.add_param('waveLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
-        #self.add_param('waveLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_param('waveLoads_Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_param('waveLoads_Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_param('waveLoads_Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_param('waveLoads_qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_param('waveLoads_z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_param('waveLoads_d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_param('waveLoads_beta', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+        #self.add_param('waveLoads_Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_param('waveLoads_Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_param('waveLoads_Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_param('waveLoads_qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        #self.add_param('waveLoads_beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
 
         self.add_param('z', np.zeros(nPoints), units='m', desc='locations along cylinder')
         self.add_param('yaw', 0.0, units='deg', desc='yaw angle')
@@ -122,12 +122,12 @@ class AeroHydroLoads(Component):
         z = params['z']
         hubHt = z[-1]  # top of cylinder
         windLoads = DirectionVector(params['windLoads_Px'], params['windLoads_Py'], params['windLoads_Pz']).inertialToWind(params['windLoads_beta']).windToYaw(params['yaw'])
-        waveLoads = DirectionVector(params['waveLoads:Px'], params['waveLoads:Py'], params['waveLoads:Pz']).inertialToWind(params['waveLoads:beta']).windToYaw(params['yaw'])
+        waveLoads = DirectionVector(params['waveLoads_Px'], params['waveLoads_Py'], params['waveLoads_Pz']).inertialToWind(params['waveLoads_beta']).windToYaw(params['yaw'])
 
-        Px = np.interp(z, params['windLoads_z'], windLoads.x) + np.interp(z, params['waveLoads:z'], waveLoads.x)
-        Py = np.interp(z, params['windLoads_z'], windLoads.y) + np.interp(z, params['waveLoads:z'], waveLoads.y)
-        Pz = np.interp(z, params['windLoads_z'], windLoads.z) + np.interp(z, params['waveLoads:z'], waveLoads.z)
-        qdyn = np.interp(z, params['windLoads_z'], params['windLoads_qdyn']) + np.interp(z, params['waveLoads:z'], params['waveLoads:qdyn'])
+        Px = np.interp(z, params['windLoads_z'], windLoads.x) + np.interp(z, params['waveLoads_z'], waveLoads.x)
+        Py = np.interp(z, params['windLoads_z'], windLoads.y) + np.interp(z, params['waveLoads_z'], waveLoads.y)
+        Pz = np.interp(z, params['windLoads_z'], windLoads.z) + np.interp(z, params['waveLoads_z'], waveLoads.z)
+        qdyn = np.interp(z, params['windLoads_z'], params['windLoads_qdyn']) + np.interp(z, params['waveLoads_z'], params['waveLoads_qdyn'])
         # outloads.z = z
 
         #The following are redundant, at one point we will consolidate them to something that works for both cylinder (not using vartrees) and jacket (still using vartrees)
@@ -294,19 +294,19 @@ class CylinderWaveDrag(Component):
         self.add_param('cd_usr', np.inf, desc='User input drag coefficient to override Reynolds number based one')
 
         # out
-        self.add_output('waveLoads:Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
-        self.add_output('waveLoads:Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
-        self.add_output('waveLoads:Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
-        self.add_output('waveLoads:qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
-        self.add_output('waveLoads:pt', np.zeros(nPoints), units='N/m**2', desc='total (static+dynamic) pressure')
-        self.add_output('waveLoads:z', np.zeros(nPoints), units='m', desc='corresponding heights')
-        self.add_output('waveLoads:d', np.zeros(nPoints), units='m', desc='corresponding diameters')
-        self.add_output('waveLoads:beta', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
-        #self.add_output('waveLoads:Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        #self.add_output('waveLoads:Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        #self.add_output('waveLoads:Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
-        #self.add_output('waveLoads:qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
-        #self.add_output('waveLoads:beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+        self.add_output('waveLoads_Px', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in x-direction')
+        self.add_output('waveLoads_Py', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in y-direction')
+        self.add_output('waveLoads_Pz', np.zeros(nPoints), units='N/m', desc='distributed loads, force per unit length in z-direction')
+        self.add_output('waveLoads_qdyn', np.zeros(nPoints), units='N/m**2', desc='dynamic pressure')
+        self.add_output('waveLoads_pt', np.zeros(nPoints), units='N/m**2', desc='total (static+dynamic) pressure')
+        self.add_output('waveLoads_z', np.zeros(nPoints), units='m', desc='corresponding heights')
+        self.add_output('waveLoads_d', np.zeros(nPoints), units='m', desc='corresponding diameters')
+        self.add_output('waveLoads_beta', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
+        #self.add_output('waveLoads_Px0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_output('waveLoads_Py0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_output('waveLoads_Pz0', 0.0, units='N/m', desc='Distributed load at z=0 MSL')
+        #self.add_output('waveLoads_qdyn0', 0.0, units='N/m**2', desc='dynamic pressure at z=0 MSL')
+        #self.add_output('waveLoads_beta0', 0.0, units='deg', desc='wind/wave angle relative to inertia c.s.')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -365,21 +365,21 @@ class CylinderWaveDrag(Component):
         #Pz0 = 0.*Fp0
 
         #Store qties at z=0 MSL
-        #unknowns['waveLoads:Px0'] = Px0
-        #unknowns['waveLoads:Py0'] = Py0
-        #unknowns['waveLoads:Pz0'] = Pz0
-        #unknowns['waveLoads:qdyn0'] = q0
-        #unknowns['waveLoads:beta0'] = beta0
+        #unknowns['waveLoads_Px0'] = Px0
+        #unknowns['waveLoads_Py0'] = Py0
+        #unknowns['waveLoads_Pz0'] = Pz0
+        #unknowns['waveLoads_qdyn0'] = q0
+        #unknowns['waveLoads_beta0'] = beta0
 
         # pack data
-        unknowns['waveLoads:Px'] = Px
-        unknowns['waveLoads:Py'] = Py
-        unknowns['waveLoads:Pz'] = Pz
-        unknowns['waveLoads:qdyn'] = q
-        unknowns['waveLoads:pt'] = q + params['p']
-        unknowns['waveLoads:z'] = params['z']
-        unknowns['waveLoads:beta'] = beta
-        unknowns['waveLoads:d'] = d
+        unknowns['waveLoads_Px'] = Px
+        unknowns['waveLoads_Py'] = Py
+        unknowns['waveLoads_Pz'] = Pz
+        unknowns['waveLoads_qdyn'] = q
+        unknowns['waveLoads_pt'] = q + params['p']
+        unknowns['waveLoads_z'] = params['z']
+        unknowns['waveLoads_beta'] = beta
+        unknowns['waveLoads_d'] = d
 
 
     def linearize(self, params, unknowns, resids):
