@@ -39,7 +39,7 @@ class GeometricConstraints(Component):
         self.add_param('d', np.zeros(nPoints), units='m')
         self.add_param('t', np.zeros(nPoints), units='m')
         self.add_param('min_d_to_t', 120.0)
-        self.add_param('min_taper', 0.4)
+        self.add_param('max_taper', 0.4)
 
         self.add_output('weldability', np.zeros(nPoints))
         self.add_output('manufacturability', np.zeros(nPoints))
@@ -58,10 +58,10 @@ class GeometricConstraints(Component):
         if not self.diamFlag: d *= 2.0
         
         min_d_to_t = params['min_d_to_t']
-        min_taper = params['min_taper']
+        max_taper = params['max_taper']
 
-        unknowns['weldability'] = (min_d_to_t-d/t)/min_d_to_t
-        manufacturability = min_taper-d[1:]/d[:-1] #taper ratio
+        unknowns['weldability'] = 1.0 - (d/t)/min_d_to_t
+        manufacturability = max_taper - np.abs(d[1:]/d[:-1] - 1.0) #taper ratio
         unknowns['manufacturability'] = np.r_[manufacturability, manufacturability[-1]]
     # def list_deriv_vars(self):
 
