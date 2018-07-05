@@ -253,6 +253,8 @@ class LinearWaves(WaveBase):
         self.add_param('hmax', 0.0, units='m', desc='maximum wave height (crest-to-trough)')
         self.add_param('T', 0.0, units='s', desc='period of maximum wave height')
 
+        # For Ansys AQWA connection
+        self.add_output('phase_speed', val=0.0, units='m/s', desc='phase speed of wave')
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -270,6 +272,8 @@ class LinearWaves(WaveBase):
         # compute wave number from dispersion relationship
         k = brentq(lambda k: omega**2 - gravity*k*math.tanh(d*k), 0, 1e3*omega**2/gravity)
         self.k = k
+        unknowns['phase_speed'] = omega / k
+        
         # zero at surface
         z_rel = params['z'] - params['z_surface']
 
