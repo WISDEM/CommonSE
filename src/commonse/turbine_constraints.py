@@ -54,12 +54,13 @@ class MaxTipDeflection(Component):
         z_tower = params['tower_z']
         d_tower = params['tower_d']
         hub_tt  = params['hub_tt']
-        precone = params['precone']
+        precone = np.abs(params['precone'])
+        tilt    = np.abs(params['tilt'])
         delta   = params['tip_deflection']
         
         # coordinates of blade tip in yaw c.s.
         blade_yaw = DirectionVector(params['precurveTip'], params['presweepTip'], params['Rtip']).\
-                    bladeToAzimuth(precone).azimuthToHub(180.0).hubToYaw(params['tilt'])
+                    bladeToAzimuth(precone).azimuthToHub(180.0).hubToYaw(tilt)
 
         # find corresponding radius of tower
         z_interp = z_tower[-1] + hub_tt[2] + blade_yaw.z
@@ -70,11 +71,8 @@ class MaxTipDeflection(Component):
         drinterp_dtowerd  = 0.5 * ddinterp_dtowerd
 
         # max deflection before strike
-        if precone >= 0:  # upwind
-            max_tip_deflection = -hub_tt[0] - blade_yaw.x - r_interp
-        else:
-            max_tip_deflection = -hub_tt[0] + blade_yaw.x - r_interp
-        unknowns['tip_deflection_ratio'] = delta * params['gamma_m'] / max_tip_deflection
+        parked_margin = np.abs(hub_tt[0] + blade_yaw.x) - r_interp
+        unknowns['tip_deflection_ratio'] = delta * params['gamma_m'] / parked_margin
             
         # ground clearance
         unknowns['ground_clearance'] = z_interp
