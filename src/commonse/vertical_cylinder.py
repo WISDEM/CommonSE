@@ -27,7 +27,8 @@ class CylinderDiscretization(Component):
         self.nRefine = np.round(nRefine)
         nFull = self.nRefine * (nPoints-1) + 1
         
-         # variables
+        # variables
+        self.add_param('foundation_height', val=0.0, units='m', desc='starting height of tower') 
         self.add_param('section_height', np.zeros(nPoints-1), units='m', desc='parameterized section heights along cylinder')
         self.add_param('diameter', np.zeros(nPoints), units='m', desc='cylinder diameter at corresponding locations')
         self.add_param('wall_thickness', np.zeros(nPoints), units='m', desc='shell thickness at corresponding locations')
@@ -47,7 +48,7 @@ class CylinderDiscretization(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
 
-        unknowns['z_param'] = np.r_[0.0, np.cumsum(params['section_height'])]
+        unknowns['z_param'] = params['foundation_height'] + np.r_[0.0, np.cumsum(params['section_height'])]
         z_full = np.array([])
         for k in range(unknowns['z_param'].size-1):
             zref = np.linspace(unknowns['z_param'][k], unknowns['z_param'][k+1], self.nRefine+1)
