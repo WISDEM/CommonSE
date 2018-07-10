@@ -34,6 +34,7 @@ class MaxTipDeflection(Component):
         super(MaxTipDeflection, self).__init__()
 
 
+        self.add_param('downwind', val=False, pass_by_obj=True)
         self.add_param('tip_deflection', val=0.0, units='m', desc='tip deflection in yaw x-direction')
         self.add_param('Rtip', val=0.0, units='m', desc='tip location in z_b')
         self.add_param('precurveTip', val=0.0, units='m', desc='tip location in x_b')
@@ -54,9 +55,10 @@ class MaxTipDeflection(Component):
         z_tower = params['tower_z']
         d_tower = params['tower_d']
         hub_tt  = params['hub_tt']
-        precone = np.abs(params['precone'])
-        tilt    = np.abs(params['tilt'])
+        precone = params['precone']
+        tilt    = params['tilt']
         delta   = params['tip_deflection']
+        upwind  = not params['downwind']
         
         # coordinates of blade tip in yaw c.s.
         blade_yaw = DirectionVector(params['precurveTip'], params['presweepTip'], params['Rtip']).\
@@ -71,7 +73,10 @@ class MaxTipDeflection(Component):
         drinterp_dtowerd  = 0.5 * ddinterp_dtowerd
 
         # max deflection before strike
-        parked_margin = np.abs(hub_tt[0] + blade_yaw.x) - r_interp
+        if upwind:
+            parked_margin = -hub_tt[0] - blade_yaw.x - r_interp
+        else:
+            parked_margin = hub_tt[0] + blade_yaw.x - r_interp
         unknowns['tip_deflection_ratio'] = delta * params['gamma_m'] / parked_margin
             
         # ground clearance
@@ -82,67 +87,70 @@ class MaxTipDeflection(Component):
         dbyx = blade_yaw.dx
         # dbyy = blade_yaw.dy
         dbyz = blade_yaw.dz
-        dtdr_dmax = -unknowns['tip_deflection_ratio'] / max_tip_deflection
+        dtdr_dpark = -unknowns['tip_deflection_ratio'] / parked_margin
         
         # Tip_deflection and gamma_m
-        self.J['tip_deflection_ratio','tip_deflection'] = params['gamma_m'] / max_tip_deflection
-        self.J['tip_deflection_ratio','gamma_m']        = delta / max_tip_deflection
+        self.J['tip_deflection_ratio','tip_deflection'] = params['gamma_m'] / parked_margin
+        self.J['tip_deflection_ratio','gamma_m']        = delta / parked_margin
         self.J['ground_clearance','tip_deflection']     = 0.0
         self.J['ground_clearance','gamma_m']            = 0.0
         
         # Rtip
         drinterp_dRtip = drinterp_dzinterp * dbyz['dz']
-        if precone >= 0:
-            self.J['tip_deflection_ratio','Rtip'] = dtdr_dmax * (-dbyx['dz'] - drinterp_dRtip)
+        if upwind:
+            self.J['tip_deflection_ratio','Rtip'] = dtdr_dpark * (-dbyx['dz'] - drinterp_dRtip)
         else:
-            self.J['tip_deflection_ratio','Rtip'] = dtdr_dmax * (dbyx['dz'] - drinterp_dRtip)
+            self.J['tip_deflection_ratio','Rtip'] = dtdr_dpark * (dbyx['dz'] - drinterp_dRtip)
         self.J['ground_clearance','Rtip'] = dbyz['dz']
 
         # precurveTip
         drinterp_dprecurveTip = drinterp_dzinterp * dbyz['dx']
-        if precone >= 0:
-            self.J['tip_deflection_ratio','precurveTip'] = dtdr_dmax * (-dbyx['dx'] - drinterp_dprecurveTip)
+        if upwind:
+            self.J['tip_deflection_ratio','precurveTip'] = dtdr_dpark * (-dbyx['dx'] - drinterp_dprecurveTip)
         else:
-            self.J['tip_deflection_ratio','precurveTip'] = dtdr_dmax * (dbyx['dx'] - drinterp_dprecurveTip)
+            self.J['tip_deflection_ratio','precurveTip'] = dtdr_dpark * (dbyx['dx'] - drinterp_dprecurveTip)
         self.J['ground_clearance','precurveTip'] = dbyz['dx']
 
         # presweep
         drinterp_dpresweepTip = drinterp_dzinterp * dbyz['dy']
-        if precone >= 0:
-            self.J['tip_deflection_ratio','presweepTip'] = dtdr_dmax * (-dbyx['dy'] - drinterp_dpresweepTip)
+        if upwind:
+            self.J['tip_deflection_ratio','presweepTip'] = dtdr_dpark * (-dbyx['dy'] - drinterp_dpresweepTip)
         else:
-            self.J['tip_deflection_ratio','presweepTip'] = dtdr_dmax * (dbyx['dy'] - drinterp_dpresweepTip)
+            self.J['tip_deflection_ratio','presweepTip'] = dtdr_dpark * (dbyx['dy'] - drinterp_dpresweepTip)
         self.J['ground_clearance','presweepTip'] = dbyz['dy']
 
 
         # precone
         drinterp_dprecone = drinterp_dzinterp * dbyz['dprecone']
-        if precone >= 0:
-            self.J['tip_deflection_ratio','precone'] = dtdr_dmax * (-dbyx['dprecone'] - drinterp_dprecone)
+        if upwind:
+            self.J['tip_deflection_ratio','precone'] = dtdr_dpark * (-dbyx['dprecone'] - drinterp_dprecone)
         else:
-            self.J['tip_deflection_ratio','precone'] = dtdr_dmax * (dbyx['dprecone'] - drinterp_dprecone)
+            self.J['tip_deflection_ratio','precone'] = dtdr_dpark * (dbyx['dprecone'] - drinterp_dprecone)
         self.J['ground_clearance','precone'] = dbyz['dprecone']
 
         # tilt
         drinterp_dtilt = drinterp_dzinterp * dbyz['dtilt']
-        if precone >= 0:
-            self.J['tip_deflection_ratio','tilt'] = dtdr_dmax * (-dbyx['dtilt'] - drinterp_dtilt)
+        if upwind:
+            self.J['tip_deflection_ratio','tilt'] = dtdr_dpark * (-dbyx['dtilt'] - drinterp_dtilt)
         else:
-            self.J['tip_deflection_ratio','tilt'] = dtdr_dmax * (dbyx['dtilt'] - drinterp_dtilt)
+            self.J['tip_deflection_ratio','tilt'] = dtdr_dpark * (dbyx['dtilt'] - drinterp_dtilt)
         self.J['ground_clearance','tilt'] = dbyz['dtilt']
 
         # hubtt
         drinterp_dhubtt = drinterp_dzinterp * np.array([0.0, 0.0, 1.0])
-        self.J['tip_deflection_ratio','hub_tt'] = dtdr_dmax * (np.array([-1.0, 0.0, 0.0]) - drinterp_dhubtt)
+        if upwind:
+            self.J['tip_deflection_ratio','hub_tt'] = dtdr_dpark * (np.array([-1.0, 0.0, 0.0]) - drinterp_dhubtt)
+        else:
+            self.J['tip_deflection_ratio','hub_tt'] = dtdr_dpark * (np.array([1.0, 0.0, 0.0]) - drinterp_dhubtt)
         self.J['ground_clearance','hub_tt']   = np.array([0.0, 0.0, 1.0])
 
         # tower_z
-        self.J['tip_deflection_ratio','tower_z'] = -dtdr_dmax * drinterp_dtowerz
+        self.J['tip_deflection_ratio','tower_z'] = -dtdr_dpark * drinterp_dtowerz
         self.J['ground_clearance','tower_z']   = np.zeros(z_tower.shape)
         self.J['ground_clearance','tower_z'][-1] = 1.0
 
         # tower_d
-        self.J['tip_deflection_ratio','tower_d'] = -dtdr_dmax * drinterp_dtowerd
+        self.J['tip_deflection_ratio','tower_d'] = -dtdr_dpark * drinterp_dtowerd
         self.J['ground_clearance','tower_d']   = np.zeros(d_tower.shape)
 
     def list_deriv_vars(self):
