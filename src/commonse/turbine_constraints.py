@@ -14,18 +14,38 @@ class TowerModes(Component):
         self.add_param('gamma_freq', val=0.0, desc='partial safety factor for fatigue')
         self.add_param('blade_number', 3, desc='number of rotor blades', pass_by_obj=True)
 
-        self.add_output('frequency_ratio', val=np.zeros(NFREQ), desc='ratio of tower frequency to blade passing frequency with margin')
+        self.add_output('frequency3P_margin_low', val=np.zeros(NFREQ), desc='Upper bound constraint of tower/structure frequency to blade passing frequency with margin')
+        self.add_output('frequency3P_margin_high', val=np.zeros(NFREQ), desc='Lower bound constraint of tower/structure frequency to blade passing frequency with margin')
+        self.add_output('frequency1P_margin_low', val=np.zeros(NFREQ), desc='Upper bound constraint of tower/structure frequency to rotor frequency with margin')
+        self.add_output('frequency1P_margin_high', val=np.zeros(NFREQ), desc='Lower bound constraint of tower/structure frequency to rotor frequency with margin')
 
     def solve_nonlinear(self, params, unknowns, resids):
-        unknowns['frequency_ratio'] = params['gamma_freq'] * (params['rotor_omega']/60.0) * params['blade_number'] / params['tower_freq']
+        freq_struct = params['tower_freq']
+        gamma       = params['gamma_freq']
+        oneP        = (params['rotor_omega']/60.0)
+        oneP_high   = oneP * gamma
+        oneP_low    = oneP / gamma
+        threeP      = oneP * params['blade_number']
+        threeP_high = threeP * gamma
+        threeP_low  = threeP / gamma
+        
+        # Compute margins between (N/3)P and structural frequencies
+        indicator_high = threeP_high * np.ones(freq_struct.shape)
+        indicator_high[freq_struct < threeP_low] = 1e-16
+        unknowns['frequency3P_margin_high'] = freq_struct / indicator_high
 
-    def linearize(self, params, unknowns, resids):
-        J = {}
-        J['frequency_ratio', 'gamma_freq']   =  unknowns['frequency_ratio'] / params['gamma_freq']
-        J['frequency_ratio', 'rotor_omega']  =  unknowns['frequency_ratio'] / params['rotor_omega']
-        J['frequency_ratio', 'blade_number'] =  unknowns['frequency_ratio'] / params['blade_number']
-        J['frequency_ratio', 'tower_freq']   = -unknowns['frequency_ratio'] / params['tower_freq']
-        return J
+        indicator_low = threeP_low * np.ones(freq_struct.shape)
+        indicator_low[freq_struct > threeP_high] = 1e30
+        unknowns['frequency3P_margin_low']  = freq_struct / indicator_low
+
+        # Compute margins between 1P and structural frequencies
+        indicator_high = oneP_high * np.ones(freq_struct.shape)
+        indicator_high[freq_struct < oneP_low] = 1e-16
+        unknowns['frequency1P_margin_high'] = freq_struct / indicator_high
+
+        indicator_low = oneP_low * np.ones(freq_struct.shape)
+        indicator_low[freq_struct > oneP_high] = 1e30
+        unknowns['frequency1P_margin_low']  = freq_struct / indicator_low
 
     
 class MaxTipDeflection(Component):
