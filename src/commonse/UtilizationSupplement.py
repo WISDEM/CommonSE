@@ -61,7 +61,8 @@ class GeometricConstraints(Component):
         max_taper = params['max_taper']
 
         unknowns['weldability'] = 1.0 - (d/t)/min_d_to_t
-        manufacturability = max_taper - np.abs(d[1:]/d[:-1] - 1.0) #taper ratio
+        d_ratio = d[1:]/d[:-1]
+        manufacturability = np.minimum(d_ratio, 1.0/d_ratio) - max_taper
         unknowns['manufacturability'] = np.r_[manufacturability, manufacturability[-1]]
     # def list_deriv_vars(self):
 
