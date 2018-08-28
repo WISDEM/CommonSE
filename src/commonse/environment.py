@@ -257,12 +257,15 @@ class LinearWaves(WaveBase):
         self.add_output('phase_speed', val=0.0, units='m/s', desc='phase speed of wave')
 
     def solve_nonlinear(self, params, unknowns, resids):
+        super(LinearWaves, self).solve_nonlinear(params, unknowns, resids)
 
         # water depth
         z_floor = params['z_floor']
         if z_floor > 0.0: z_floor *= -1.0
         d = params['z_surface']-z_floor
-
+        # Use zero entries if there is no depth and no water
+        if d == 0.0: return
+        
         # design wave height
         h = params['hmax']
 
