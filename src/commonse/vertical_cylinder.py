@@ -56,7 +56,6 @@ class CylinderDiscretization(Component):
         unknowns['z_full']  = np.unique(z_full) #np.linspace(unknowns['z_param'][0], unknowns['z_param'][-1], self.nFull) 
         unknowns['d_full']  = np.interp(unknowns['z_full'], unknowns['z_param'], params['diameter'])
         unknowns['t_full']  = np.interp(unknowns['z_full'], unknowns['z_param'], params['wall_thickness'])
-        
 
 class CylinderMass(Component):
 
@@ -73,6 +72,12 @@ class CylinderMass(Component):
         self.add_output('center_of_mass', val=0.0, units='m', desc='z-position of center of mass of cylinder')
         self.add_output('section_center_of_mass', val=np.zeros(nPoints-1), units='m', desc='z position of center of mass of each can in the cylinder')
         self.add_output('I_base', np.zeros((6,)), units='kg*m**2', desc='mass moment of inertia of cylinder about base [xx yy zz xy xz yz]')
+        
+        # Derivatives
+        self.deriv_options['type'] = 'fd'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['step_size'] = 1e-5
         
     def solve_nonlinear(self, params, unknowns, resids):
         # Unpack variables for thickness and average radius at each can interface
@@ -233,7 +238,7 @@ class CylinderFrame3DD(Component):
 
         # rigid base
         node = params['kidx'] + np.ones(len(params['kidx']), dtype=np.int_)  # add one because 0-based index but 1-based node numbering
-        rigid = np.inf
+        rigid = 1.0
 
         reactions = frame3dd.ReactionData(node, params['kx'], params['ky'], params['kz'], params['ktx'], params['kty'], params['ktz'], rigid)
         # -----------------------------------
@@ -314,7 +319,8 @@ class CylinderFrame3DD(Component):
         load.changeTrapezoidalLoads(EL, xx1, xx2, wx1, wx2, xy1, xy2, wy1, wy2, xz1, xz2, wz1, wz2)
 
         cylinder.addLoadCase(load)
-
+        # Debugging
+        #cylinder.write('temp.3dd')
         # -----------------------------------
         # run the analysis
         displacements, forces, reactions, internalForces, mass, modal = cylinder.run()
