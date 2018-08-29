@@ -368,8 +368,8 @@ class TowerSoilK(SoilBase):
         # variable
         self.add_param('kin', np.ones(6)*float('inf'),  desc='spring stiffness. rigid directions should use \
             ``float(''inf'')``. order: (x, theta_x, y, theta_y, z, theta_z)')
-        self.add_param('rigid', np.ones(6), dtype=np.bool, desc='directions that should be considered infinitely rigid\
-            order is x, theta_x, y, theta_y, z, theta_z')
+        #self.add_param('rigid', np.ones(6), dtype=np.bool, desc='directions that should be considered infinitely rigid\
+        #    order is x, theta_x, y, theta_y, z, theta_z')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -382,14 +382,14 @@ class TowerSoil(SoilBase):
 
         super(TowerSoil, self).__init__()
         # variable
-        self.add_param('r0', 1.0, units='m', desc='radius of base of tower')
+        self.add_param('d0', 1.0, units='m', desc='diameter of base of tower')
         self.add_param('depth', 1.0, units='m', desc='depth of foundation in the soil')
 
         # parameter
         self.add_param('G', 140e6, units='Pa', desc='shear modulus of soil')
         self.add_param('nu', 0.4, desc='Poisson''s ratio of soil')
-        self.add_param('rigid', np.ones(6), dtype=np.bool, desc='directions that should be considered infinitely rigid\
-            order is x, theta_x, y, theta_y, z, theta_z')
+        #self.add_param('rigid', np.ones(6), dtype=np.bool, desc='directions that should be considered infinitely rigid\
+        #    order is x, theta_x, y, theta_y, z, theta_z')
 
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -397,7 +397,7 @@ class TowerSoil(SoilBase):
         G = params['G']
         nu = params['nu']
         h = params['depth']
-        r0 = params['r0']
+        r0 = 0.5*params['d0']
 
         # vertical
         eta = 1.0 + 0.6*(1.0-nu)*h/r0
@@ -415,7 +415,7 @@ class TowerSoil(SoilBase):
         k_phi = 16.0*G*r0**3/3.0
 
         unknowns['k'] = np.array([k_x, k_thetax, k_x, k_thetax, k_z, k_phi])
-        unknowns['k'][params['rigid']] = float('inf')
+        #unknowns['k'][params['rigid']] = float('inf')
 
 
     def linearize(self, params, unknowns, resids):

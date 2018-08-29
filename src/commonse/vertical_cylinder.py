@@ -238,7 +238,7 @@ class CylinderFrame3DD(Component):
 
         # rigid base
         node = params['kidx'] + np.ones(len(params['kidx']), dtype=np.int_)  # add one because 0-based index but 1-based node numbering
-        rigid = 1.0
+        rigid = float('inf')
 
         reactions = frame3dd.ReactionData(node, params['kx'], params['ky'], params['kz'], params['ktx'], params['kty'], params['ktz'], rigid)
         # -----------------------------------
