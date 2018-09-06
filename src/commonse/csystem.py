@@ -7,6 +7,7 @@ Created by Andrew Ning on 2/21/2012.
 Copyright (c) NREL. All rights reserved.
 """
 
+from __future__ import print_function
 import numpy as np
 
 
@@ -940,8 +941,8 @@ class DirectionVector(object):
 #     def hubToYaw(self, Theta, length):
 
 #         F, M = self.__translate(length, 0.0, 0.0)
-#         print self.F, F
-#         print self.M, M
+#         print(self.F, F)
+#         print(self.M, M)
 #         Fnew = F.hubToYaw(Theta)
 #         Mnew = M.hubToYaw(Theta)
 
@@ -1053,7 +1054,7 @@ class DirectionVector(object):
 #     Fwind = thrust.rotorToYaw(tilt).yawToWind(yaw)
 
 #     # print the components
-#     print 'Fwind components (x 10^6 N) =', Fwind.x/1e6, Fwind.y/1e6, Fwind.z/1e6
+#     print('Fwind components (x 10^6 N) =', Fwind.x/1e6, Fwind.y/1e6, Fwind.z/1e6)
 
 
 if __name__ == '__main__':
@@ -1070,10 +1071,10 @@ if __name__ == '__main__':
 
     dx, dy, dz = a.cross_deriv_array(b)
 
-    print dx['dax']
-    print dx['day']
-    print dx['daz']
-    print dx['dby']
+    print(dx['dax'])
+    print(dx['day'])
+    print(dx['daz'])
+    print(dx['dby'])
 
     exit()
 
@@ -1095,39 +1096,39 @@ if __name__ == '__main__':
     dFz = F.dz
     # dFx, dFy, dFz = DirectionVector(T1, T2, T3).hubToYaw(tilt, derivatives=True)
 
-    print dFx['dx']
-    print (Fp1.x - F.x)/1e-6
-    print dFx['dy']
-    print (Fp2.x - F.x)/1e-6
-    print dFx['dz']
-    print (Fp3.x - F.x)/1e-6
-    print dFx['dtilt'], 'theta'
-    print (Fp4.x - F.x)/1e-6
+    print(dFx['dx'])
+    print((Fp1.x - F.x)/1e-6)
+    print(dFx['dy'])
+    print((Fp2.x - F.x)/1e-6)
+    print(dFx['dz'])
+    print((Fp3.x - F.x)/1e-6)
+    print(dFx['dtilt'], 'theta')
+    print((Fp4.x - F.x)/1e-6)
 
 
-    print dFy['dx']
-    print (Fp1.y - F.y)/1e-6
-    print dFy['dy']
-    print (Fp2.y - F.y)/1e-6
-    print dFy['dz']
-    print (Fp3.y - F.y)/1e-6
-    print dFy['dtilt'], 'theta'
-    print (Fp4.y - F.y)/1e-6
+    print(dFy['dx'])
+    print((Fp1.y - F.y)/1e-6)
+    print(dFy['dy'])
+    print((Fp2.y - F.y)/1e-6)
+    print(dFy['dz'])
+    print((Fp3.y - F.y)/1e-6)
+    print(dFy['dtilt'], 'theta')
+    print((Fp4.y - F.y)/1e-6)
 
 
-    print dFz['dx']
-    print (Fp1.z - F.z)/1e-6
-    print dFz['dy']
-    print (Fp2.z - F.z)/1e-6
-    print dFz['dz']
-    print (Fp3.z - F.z)/1e-6
-    print dFz['dtilt'], 'theta'
-    print (Fp4.z - F.z)/1e-6
+    print(dFz['dx'])
+    print((Fp1.z - F.z)/1e-6)
+    print(dFz['dy'])
+    print((Fp2.z - F.z)/1e-6)
+    print(dFz['dz'])
+    print((Fp3.z - F.z)/1e-6)
+    print(dFz['dtilt'], 'theta')
+    print((Fp4.z - F.z)/1e-6)
 
 
-    print
-    print
-    print
+    print()
+    print()
+    print()
     yaw = 3.0
     F = DirectionVector(T1, T2, T3).hubToYaw(tilt).yawToWind(yaw)
 
@@ -1141,63 +1142,63 @@ if __name__ == '__main__':
     dFy = F.dy
     dFz = F.dz
 
-    print dFx['dx']
-    print (Fp1.x - F.x)/1e-6
-    print dFx['dy']
-    print (Fp2.x - F.x)/1e-6
-    print dFx['dz']
-    print (Fp3.x - F.x)/1e-6
-    print dFx['dtilt'], 'theta'
-    print (Fp4.x - F.x)/1e-6
-    print dFx['dyaw']
-    print (Fp5.x - F.x)/1e-6
+    print(dFx['dx'])
+    print((Fp1.x - F.x)/1e-6)
+    print(dFx['dy'])
+    print((Fp2.x - F.x)/1e-6)
+    print(dFx['dz'])
+    print((Fp3.x - F.x)/1e-6)
+    print(dFx['dtilt'], 'theta')
+    print((Fp4.x - F.x)/1e-6)
+    print(dFx['dyaw'])
+    print((Fp5.x - F.x)/1e-6)
 
-    print dFy['dx']
-    print (Fp1.y - F.y)/1e-6
-    print dFy['dy']
-    print (Fp2.y - F.y)/1e-6
-    print dFy['dz']
-    print (Fp3.y - F.y)/1e-6
-    print dFy['dtilt'], 'theta'
-    print (Fp4.y - F.y)/1e-6
-    print dFy['dyaw']
-    print (Fp5.y - F.y)/1e-6
+    print(dFy['dx'])
+    print((Fp1.y - F.y)/1e-6)
+    print(dFy['dy'])
+    print((Fp2.y - F.y)/1e-6)
+    print(dFy['dz'])
+    print((Fp3.y - F.y)/1e-6)
+    print(dFy['dtilt'], 'theta')
+    print((Fp4.y - F.y)/1e-6)
+    print(dFy['dyaw'])
+    print((Fp5.y - F.y)/1e-6)
 
 
-    print dFz['dx']
-    print (Fp1.z - F.z)/1e-6
-    print dFz['dy']
-    print (Fp2.z - F.z)/1e-6
-    print dFz['dz']
-    print (Fp3.z - F.z)/1e-6
-    print dFz['dtilt'], 'theta'
-    print (Fp4.z - F.z)/1e-6
-    print dFz['dyaw']
-    print (Fp5.z - F.z)/1e-6
+    print(dFz['dx'])
+    print((Fp1.z - F.z)/1e-6)
+    print(dFz['dy'])
+    print((Fp2.z - F.z)/1e-6)
+    print(dFz['dz'])
+    print((Fp3.z - F.z)/1e-6)
+    print(dFz['dtilt'], 'theta')
+    print((Fp4.z - F.z)/1e-6)
+    print(dFz['dyaw'])
+    print((Fp5.z - F.z)/1e-6)
 
 
 
     # x = DirectionVector(4.0, 5.0, 6.0)
 
-    # print x
+    # print(x)
 
     # x = DirectionVector([4.0]*2, [5.0]*2, [6.0]*2)
 
-    # print x
+    # print(x)
 
     # # p = Position(1.0, 2.0, 3.0)
 
     # # x = DirectionVector(4.0, 5.0, 6.0)
 
-    # # print p - x
+    # # print(p - x)
 
     # # y = p - x
 
-    # # print p.__class__
-    # # print x.__class__
-    # # print y.__class__
+    # # print(p.__class__)
+    # # print(x.__class__)
+    # # print(y.__class__)
 
-    # # print p.yawToWind(0.0, 10.0).yawToWind(0.0, 10.0)
+    # # print(p.yawToWind(0.0, 10.0).yawToWind(0.0, 10.0))
 
     # # # example()
 

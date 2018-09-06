@@ -25,7 +25,7 @@ class CylinderDiscretization(Component):
         super(CylinderDiscretization, self).__init__()
 
         self.nRefine = np.round(nRefine)
-        nFull = self.nRefine * (nPoints-1) + 1
+        nFull = int(self.nRefine * (nPoints-1) + 1)
         
         # variables
         self.add_param('foundation_height', val=0.0, units='m', desc='starting height of tower') 
@@ -107,7 +107,7 @@ class CylinderMass(Component):
 
         # Sum up each cylinder section using parallel axis theorem
         I_base = np.zeros((3,3))
-        for k in xrange(Izz_section.size):
+        for k in range(Izz_section.size):
             R = np.array([0.0, 0.0, cm_section[k]])
             Icg = assembleI( [Ixx_section[k], Iyy_section[k], Izz_section[k], 0.0, 0.0, 0.0] )
 

@@ -33,8 +33,8 @@ class WeibullCDF(CDFBase):
 
         self.add_param('A', shape=1, desc='scale factor')
         
-	self.deriv_options['form'] = 'central'
-	self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
 
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -63,8 +63,8 @@ class WeibullWithMeanCDF(CDFBase):
 
         self.add_param('xbar', shape=1, desc='mean value of distribution')
 
-	self.deriv_options['form'] = 'central'
-	self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
         
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -100,8 +100,8 @@ class RayleighCDF(CDFBase):
         # variables
         self.add_param('xbar', shape=1, units='m/s', desc='reference wind speed (usually at hub height)')
 
-	self.deriv_options['form'] = 'central'
-	self.deriv_options['step_calc'] = 'relative'
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
 
     def solve_nonlinear(self, params, unknowns, resids):
 

@@ -19,6 +19,7 @@ Copyright (c) NREL. All rights reserved.
 # Copyright:   (c) rdamiani 2015
 # Licence:     <Apache 2015>
 #-------------------------------------------------------------------------------
+from __future__ import print_function
 import math
 import numpy as np
 
@@ -505,7 +506,7 @@ def main():
     # out
     Re = prob['p1.rho']*prob['p1.U']*prob['p1.d']/prob['p1.mu']
     cd, dcd_dRe = cylinderDrag(Re)
-    print cd
+    print(cd)
     import matplotlib.pyplot as plt
 
     plt.plot(prob['p1.windLoads_Px'], prob['p1.windLoads_z'])

@@ -7,14 +7,15 @@ Created by Andrew Ning on 2012-01-20.
 Copyright (c) NREL. All rights reserved.
 """
 
+from __future__ import print_function
 import math
 import numpy as np
 from scipy.optimize import brentq
 from openmdao.api import Component, Problem, Group, IndepVarComp
 import sys
 
-from utilities import hstack, vstack
-from constants import gravity
+from .utilities import hstack, vstack
+from .constants import gravity
 
 #TODO CHECK
 
@@ -491,9 +492,9 @@ if __name__ == '__main__':
     prob.run()
 
     J = prob.check_total_derivatives(out_stream=None)
-    print J
+    print(J)
 
-    #print prob['p1.z']
+    #print(prob['p1.z'])
 
     import matplotlib.pyplot as plt
     plt.figure(1)
@@ -524,9 +525,9 @@ if __name__ == '__main__':
 
     prob.run()
     #Jlog = prob.check_total_derivatives(out_stream=None)
-    #print Jlog
+    #print(Jlog)
 
-    #print prob['p1.z']
+    #print(prob['p1.z'])
 
     import matplotlib.pyplot as plt
     plt.plot(prob['p1.z'], prob['p1.U'], label='Log')

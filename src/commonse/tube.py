@@ -9,18 +9,19 @@
 # Copyright:   (c) rdamiani 2013
 # Licence:     <your licence>
 #-------------------------------------------------------------------------------
+from __future__ import print_function
 import math
 import numpy as np
-from Material import Material
+from .Material import Material
 from openmdao.api import Component, Group, Problem
 pi = math.pi
 
 def main():
-    print 'Testing Tube'
+    print('Testing Tube')
     a=Tube(np.array([5.,6.]),np.array([0.10,0.10]),np.array([10.,10]),mat=Material(matname='heavySteel'))
-    print 'Area and PSEUDOMass of tube a', a.Area, a.pseudomass
+    print('Area and PSEUDOMass of tube a', a.Area, a.pseudomass)
     b=Tube(3.,0.10,10.,mat=Material(matname='heavySteel'))
-    print 'Area and PSEUDOMass of tube b', b.Area, b.pseudomass
+    print('Area and PSEUDOMass of tube b', b.Area, b.pseudomass)
 
 
 
@@ -79,7 +80,7 @@ class Tube:
         self.mat=mat
         if np.size(D)>1 and type(mat) != np.ndarray: #in this case I need to make sure we have a list of materials
             import copy
-            self.mat=np.array([copy.copy(mat) for i in xrange(np.size(D))])
+            self.mat=np.array([copy.copy(mat) for i in range(np.size(D))])
 
     @property
     def Area(self): #Cross sectional area of tube
