@@ -801,7 +801,7 @@ def _compute_elastic_stress_limits(R_od, t_wall, h_section, h_web, t_web, w_flan
     # Find the buckling mode- closest integer that is root of solved equation
     n   = np.zeros((nsections,))
     maxn = 50
-    for k in xrange(nsections):
+    for k in range(nsections):
         c = L_stiffener[k] / np.pi / R[k]
         myfun = lambda x:((c*x)**2*(1 + (c*x)**2)**4/(2 + 3*(c*x)**2) - z_m[k])
         try:
@@ -845,7 +845,7 @@ def _compute_elastic_stress_limits(R_od, t_wall, h_section, h_web, t_web, w_flan
     # Compute pressure leading to elastic failure
     n = np.zeros(R_od.shape)
     pressure_failure_peG = np.zeros(R_od.shape)
-    for k in xrange(nsections):
+    for k in range(nsections):
         peG = lambda x: ( E*lambda_G[k]**4*t_wall[k]/R[k]/(x**2+0.0*lambda_G[k]**2-1)/(x**2 + lambda_G[k]**2)**2 +
                           E*Ier[k]*(x**2-1)/L_stiffener[k]/Rc[k]**2/R_od[k] )
         minout = minimize_scalar(peG, bounds=(2.0, 15.0), method='bounded')
@@ -932,7 +932,7 @@ def shellBuckling_withStiffeners(P, sigma_ax, R_od, t_wall, h_section, h_web, t_
         Kph   = 1.0
         c1    = (Fxci + Frci) / sigma_y - 1.0
         c2    = load_ratio_k * Kph / Kth
-        for k in xrange(Fxci.size):
+        for k in range(Fxci.size):
             try:
                 Fthci[k] = brentq(lambda x: (c2[k]*x/Fxci[k])**2 - c1[k]*(c2[k]*x/Fxci[k])*(x/Frci[k]) + (x/Frci[k])**2 - 1.0, 0, Fxci[k]+Frci[k], maxiter=20)
             except:
