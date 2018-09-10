@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 from openmdao.api import Component, Group, IndepVarComp
 
@@ -197,7 +198,7 @@ class RotorLoads(Component):
         else:
             Mout = M
             #REMOVE WEIGHT EFFECT TO ACCOUNT FOR P-Delta Effect
-            print "!!!! No weight effect on rotor moments -TowerSE  !!!!"
+            print("!!!! No weight effect on rotor moments -TowerSE  !!!!")
 
         # put back in array
         unknowns['top_F'] = np.array([Fout.x, Fout.y, Fout.z])
@@ -278,7 +279,7 @@ class RNA(Group):
         super(RNA, self).__init__()
 
         self.add('mass', RNAMass(), promotes=['*'])
-        for k in xrange(nLC):
+        for k in range(nLC):
             lc = '' if nLC==1 else str(k+1)
             self.add('loads'+lc, RotorLoads(), promotes=['rna_mass','rna_cm','r_hub','rna_weightM','downwind','tilt'])
 
