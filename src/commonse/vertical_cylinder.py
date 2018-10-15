@@ -5,6 +5,7 @@ from commonse.tube import CylindricalShellProperties
 
 from commonse import gravity, eps
 import commonse.frustum as frustum
+import commonse.manufacturing as manufacture
 from commonse.UtilizationSupplement import hoopStressEurocode, hoopStress
 from commonse.utilities import assembleI, unassembleI
 import pyframe3dd.frame3dd as frame3dd
@@ -68,6 +69,11 @@ class CylinderMass(Component):
         self.add_param('material_density', 0.0, units='kg/m**3', desc='material density')
         self.add_param('outfitting_factor', val=0.0, desc='Multiplier that accounts for secondary structure mass inside of cylinder')
         
+        self.add_param('material_cost_rate', 0.0, units='USD/kg', desc='Raw material cost rate: steel $1.1/kg, aluminum $3.5/kg')
+        self.add_param('labor_cost_rate', 0.0, units='USD/min', desc='Labor cost rate')
+        self.add_param('painting_cost_rate', 0.0, units='USD/m/m', desc='Painting / surface finishing cost rate')
+        
+        self.add_output('cost', val=0.0, units='USD', desc='Total cylinder cost')
         self.add_output('mass', val=np.zeros(nPoints-1), units='kg', desc='Total cylinder mass')
         self.add_output('center_of_mass', val=0.0, units='m', desc='z-position of center of mass of cylinder')
         self.add_output('section_center_of_mass', val=np.zeros(nPoints-1), units='m', desc='z position of center of mass of each can in the cylinder')
@@ -87,11 +93,13 @@ class CylinderMass(Component):
         Rt  = 0.5*params['d_full'][1:]
         zz  = params['z_full']
         H   = np.diff(zz)
-        rho = params['material_density'] * params['outfitting_factor']
+        coeff = params['outfitting_factor']
+        if coeff < 1.0: coeff += 1.0
+        rho = params['material_density']
 
         # Total mass of cylinder
         V_shell = frustum.frustumShellVol(Rb, Rt, Tb, Tt, H)
-        unknowns['mass'] = rho * V_shell
+        unknowns['mass'] = coeff * rho * V_shell
         
         # Center of mass of each can/section
         cm_section = zz[:-1] + frustum.frustumShellCG(Rb, Rt, Tb, Tt, H)
@@ -119,7 +127,45 @@ class CylinderMass(Component):
         unknowns['I_base'] = unassembleI(I_base)
         
 
+        # Compute costs based on "Optimum Design of Steel Structures" by Farkas and Jarmai
+        # All dimensions for correlations based on mm, not meters.
+        t_ave  = 0.5*(Tb + Tt)
+        R_ave  = 0.5*(Rb + Rt)
+        taper  = np.minimum(Rb/Rt, Rt/Rb)
+        nsec   = t_ave.size
+        mplate = rho * V_shell.sum()
+        k_m    = params['material_cost_rate'] #1.1 # USD / kg carbon steel plate
+        k_f    = params['labor_cost_rate'] #1.0 # USD / min labor
+        k_p    = params['painting_cost_rate'] #USD / m^2 painting
+        
+        # Cost Step 1) Cutting flat plates for taper using plasma cutter
+        cutLengths = 2.0 * np.sqrt( (Rt-Rb)**2.0 + H**2.0 ) # Factor of 2 for both sides
+        # Cost Step 2) Rolling plates 
+        # Cost Step 3) Welding rolled plates into shells (set difficulty factor based on tapering with logistic function)
+        theta_F = 4.0 - 3.0 / (1 + np.exp(-5.0*(taper-0.75)))
+        # Cost Step 4) Circumferential welds to join cans together
+        theta_A = 2.0
 
+        # Labor-based expenses
+        K_f = k_f * ( manufacture.steel_cutting_plasma_time(cutLengths, t_ave) +
+                      manufacture.steel_rolling_time(theta_F, R_ave, t_ave) +
+                      manufacture.steel_butt_welding_time(theta_A, nsec, mplate, H, t_ave) +
+                      manufacture.steel_butt_welding_time(theta_A, nsec, mplate, 2*np.pi*Rb[1:], Tb[1:]) )
+        
+        # Cost step 5) Painting- outside and inside
+        theta_p = 2
+        K_p  = k_p * theta_p * 2 * (2 * np.pi * R_ave * H).sum()
+
+        # Cost step 6) Outfitting
+        K_o = 1.5 * k_m * (coeff - 1.0) * mplate
+        
+        # Material cost, without outfitting
+        K_m = k_m * mplate
+
+        # Assemble all costs
+        unknowns['cost'] = K_m + K_o + K_p + K_f
+
+        
 
 #@implement_base(CylinderFromCSProps)
 class CylinderFrame3DD(Component):
