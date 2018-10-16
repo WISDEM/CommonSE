@@ -14,6 +14,16 @@ class TestAny(unittest.TestCase):
         npt.assert_equal(x, np.array([9.0, 11.0]))
         npt.assert_equal(dx, np.array([[0.5, 0.5, 0.0],[0.0, 0.5, 0.5]]))
 
+
+    def testSectionalInterp(self):
+        x = np.arange(0.0, 2.1, 0.5)
+        y = np.array([-1.0, 1.0, -2.0, 2.0])
+        xi = np.array([-0.1, 0.25, 0.9, 1.4, 1.5, 1.6, 2.1])
+        yi = util.sectionalInterp(xi, x, y)
+
+        y_expect = np.array([-1.0, -1.0, 1.0, -2.0, 2.0, 2.0, 2.0])
+        npt.assert_array_equal(yi, y_expect)
+        
         
 def suite():
     suite = unittest.TestSuite()

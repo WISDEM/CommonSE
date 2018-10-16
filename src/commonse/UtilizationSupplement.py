@@ -9,7 +9,7 @@ Copyright (c) NREL. All rights reserved.
 from math import atan2
 import numpy as np
 from commonse.constants import eps
-from commonse.utilities import CubicSplineSegment, cubic_spline_eval, smooth_max, smooth_min
+from commonse.utilities import CubicSplineSegment, cubic_spline_eval, smooth_max, smooth_min, nodal2sectional, sectional2nodal
 from openmdao.api import Component
 from scipy.optimize import brentq, minimize_scalar
 
@@ -37,12 +37,12 @@ class GeometricConstraints(Component):
         self.diamFlag = diamFlag
         
         self.add_param('d', np.zeros(nPoints), units='m')
-        self.add_param('t', np.zeros(nPoints), units='m')
+        self.add_param('t', np.zeros(nPoints-1), units='m')
         self.add_param('min_d_to_t', 120.0)
         self.add_param('max_taper', 0.4)
 
-        self.add_output('weldability', np.zeros(nPoints))
-        self.add_output('manufacturability', np.zeros(nPoints))
+        self.add_output('weldability', np.zeros(nPoints-1))
+        self.add_output('manufacturability', np.zeros(nPoints-1))
 
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -51,7 +51,7 @@ class GeometricConstraints(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
 
-        d = params['d']
+        d,_ = nodal2sectional(params['d'])
         t = params['t']
 
         # Check if the input was radii instead of diameters and convert if necessary
@@ -121,6 +121,7 @@ def fatigue(M_DEL, N_DEL, d, t, m=4, DC=80.0, eta=1.265, stress_factor=1.0, weld
     dvec = np.array(d)*1e3
     tvec = np.array(t)*1e3
 
+    t = sectional2nodal(t)
     nvec = len(d)
     damage = np.zeros(nvec)
 
@@ -276,8 +277,6 @@ def shellBucklingEurocode(d, t, sigma_z, sigma_t, tau_zt, L_reinforced, E, sigma
 
         r1 = d[i]/2.0 - t[i]/2.0
         r2 = d[i]/2.0 - t[i]/2.0
-        t1 = t[i]
-        t2 = t[i]
 
         sigma_z_shell = sigma_z[i]
         sigma_t_shell = sigma_t[i]
@@ -289,7 +288,7 @@ def shellBucklingEurocode(d, t, sigma_z, sigma_t, tau_zt, L_reinforced, E, sigma
         sigma_t_shell = gamma_f*abs(sigma_t_shell)
         tau_zt_shell = gamma_f*abs(tau_zt_shell)
 
-        EU_utilization[i] = _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z_shell, sigma_t_shell, tau_zt_shell, E[i], sigma_y[i])
+        EU_utilization[i] = _shellBucklingOneSection(h, r1, r2, t[i], gamma_b, sigma_z_shell, sigma_t_shell, tau_zt_shell, E[i], sigma_y[i])
 
         #make them into vectors
         sigma_z_sh[i]=sigma_z_shell
@@ -425,7 +424,7 @@ def _tausmooth(omega, rovert):
 
 
 
-def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_zt, E, sigma_y):
+def _shellBucklingOneSection(h, r1, r2, t, gamma_b, sigma_z, sigma_t, tau_zt, E, sigma_y):
     """
     Estimate shell buckling for one tapered cylindrical shell section.
 
@@ -433,8 +432,7 @@ def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_z
     h - height of conical section
     r1 - radius at bottom
     r2 - radius at top
-    t1 - shell thickness at bottom
-    t2 - shell thickness at top
+    t - shell thickness
     E - modulus of elasticity
     sigma_y - yield stress
     gamma_b - buckling reduction safety factor
@@ -452,7 +450,6 @@ def _shellBucklingOneSection(h, r1, r2, t1, t2, gamma_b, sigma_z, sigma_t, tau_z
     # ----- geometric parameters --------
     beta = atan2(r1-r2, h)
     L = h/np.cos(beta)
-    t = 0.5*(t1+t2)
 
     # ------------- axial stress -------------
     # length parameter

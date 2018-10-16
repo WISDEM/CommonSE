@@ -191,13 +191,13 @@ class TestUtilization(unittest.TestCase):
         P = rho * g * z
         sigma_ax = 9000 * kip_to_si / (2*np.pi*(R_od[0]-0.5*t_wall[0])*t_wall[0])
         
-        (flange_compactness, web_compactness, axial_local_unity, axial_general_unity,
-         external_local_unity, external_general_unity) = util.shellBuckling_withStiffeners(P, sigma_ax, R_od, t_wall, h_section,
-                                                                                           h_web, t_web, w_flange, t_flange,
-                                                                                           L_stiffener, E, nu, sigma_y, loading='radial')
+        (axial_local_unity, axial_general_unity, external_local_unity, external_general_unity,
+         _,_,_,_) = util.shellBuckling_withStiffeners(P, sigma_ax, R_od, t_wall, h_section,
+                                                      h_web, t_web, w_flange, t_flange,
+                                                      L_stiffener, E, nu, sigma_y, loading='radial')
         
-        npt.assert_almost_equal(web_compactness, 24.1/22.4 * np.ones((3,)), decimal=3)
-        npt.assert_almost_equal(flange_compactness, 9.03/5.0 * np.ones((3,)), decimal=3)
+        #npt.assert_almost_equal(web_compactness, 24.1/22.4 * np.ones((3,)), decimal=3)
+        #npt.assert_almost_equal(flange_compactness, 9.03/5.0 * np.ones((3,)), decimal=3)
         npt.assert_almost_equal(axial_local_unity, 1.07, 1)
         npt.assert_almost_equal(axial_general_unity, 0.34, 1)
         npt.assert_almost_equal(external_local_unity, 1.07, 1)

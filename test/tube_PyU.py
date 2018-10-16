@@ -4,7 +4,6 @@ import unittest
 from commonse.tube import Tube, CylindricalShellProperties
 
 npts = 100
-myones = np.ones((npts,))
 
 class TestTube(unittest.TestCase):
     def setUp(self):
@@ -12,8 +11,8 @@ class TestTube(unittest.TestCase):
         self.unknowns = {}
         self.resid = None
 
-        self.params['d'] = 2*5.0
-        self.params['t'] = 1.0
+        self.params['d'] = 2*5.0*np.ones(npts)
+        self.params['t'] = 1.0*np.ones(npts-1)
         
         self.mytube = CylindricalShellProperties(npts)
 
@@ -31,10 +30,10 @@ class TestTube(unittest.TestCase):
     def testOutputsIncremental(self):
         self.mytube.solve_nonlinear(self.params, self.unknowns, self.resid)
 
-        self.assertAlmostEqual(self.unknowns['Az'], np.pi*9.0)
-        self.assertAlmostEqual(self.unknowns['Ixx'],  np.pi*369.0/4.0)
-        self.assertAlmostEqual(self.unknowns['Iyy'],  np.pi*369.0/4.0)
-        self.assertAlmostEqual(self.unknowns['Jz'],  np.pi*369.0/2.0)
+        npt.assert_almost_equal(self.unknowns['Az'], np.pi*9.0)
+        npt.assert_almost_equal(self.unknowns['Ixx'],  np.pi*369.0/4.0)
+        npt.assert_almost_equal(self.unknowns['Iyy'],  np.pi*369.0/4.0)
+        npt.assert_almost_equal(self.unknowns['Jz'],  np.pi*369.0/2.0)
         
 def suite():
     suite = unittest.TestSuite()

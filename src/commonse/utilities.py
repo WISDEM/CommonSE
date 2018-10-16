@@ -85,6 +85,14 @@ def linspace_with_deriv(start, stop, num):
     return y, dy_dstart, dy_dstop
 
 
+
+def sectionalInterp(xi, x, y):
+    epsilon = 1e-11
+    xx=np.c_[x[:-1], x[1:]-epsilon].flatten()
+    yy=np.c_[y, y].flatten()    
+    return np.interp(xi, xx, yy)
+
+
 def interp_with_deriv(x, xp, yp):
     """linear interpolation and its derivative. To be precise, linear interpolation is not
     differentiable right at the control points, but in general it works well enough"""
@@ -334,6 +342,10 @@ def nodal2sectional(x):
     dy = np.c_[0.5*np.eye(y.size), np.zeros(y.size)]
     dy[np.arange(y.size), 1+np.arange(y.size)] = 0.5
     return y, dy
+
+
+def sectional2nodal(x):
+    return np.r_[x[0], np.convolve(x, [0.5, 0.5], 'valid'), x[-1]]
 
 
 def cubic_spline_eval(x1, x2, f1, f2, g1, g2, x):

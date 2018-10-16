@@ -8,8 +8,13 @@ def steel_cutting_plasma_time(length, thickness):
     return np.sum( time)
 
 def steel_rolling_time(theta, radius, thickness):
-    # Length input as meters, converted to mm
+    # Radius and thickness input as meters, converted to mm
     time = theta * np.exp(6.8582513 - 4.527217/np.sqrt(1e3*thickness+eps) + 0.009541996*np.sqrt(2*1e3*radius)) 
+    return np.sum( time )
+
+def steel_tube_cutgrind_time(theta, radius, thickness, angle):
+    # Radius and thickness input as meters, converted to mm
+    time = theta * 2.5 * np.pi * (2.0*1e3*radius) / ((350.0 - 2.0*1e3*thickness)*0.3*np.sin(angle))
     return np.sum( time )
 
 def steel_welding_time(theta, npieces, mtotal, length, thickness, coeff):
@@ -23,4 +28,7 @@ def steel_butt_welding_time(theta, npieces, mtotal, length, thickness):
 
 def steel_filett_welding_time(theta, npieces, mtotal, length, thickness):
     return steel_welding_time(theta, npieces, mtotal, length, thickness, 0.3394)
+
+def steel_tube_welding_time(theta, npieces, mtotal, length, thickness):
+    return steel_welding_time(theta, npieces, mtotal, length, thickness, 0.7889)
 

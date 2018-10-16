@@ -7,7 +7,7 @@ from commonse import gravity, eps
 import commonse.frustum as frustum
 import commonse.manufacturing as manufacture
 from commonse.UtilizationSupplement import hoopStressEurocode, hoopStress
-from commonse.utilities import assembleI, unassembleI
+from commonse.utilities import assembleI, unassembleI, sectionalInterp, nodal2sectional
 import pyframe3dd.frame3dd as frame3dd
 
 
@@ -32,13 +32,13 @@ class CylinderDiscretization(Component):
         self.add_param('foundation_height', val=0.0, units='m', desc='starting height of tower') 
         self.add_param('section_height', np.zeros(nPoints-1), units='m', desc='parameterized section heights along cylinder')
         self.add_param('diameter', np.zeros(nPoints), units='m', desc='cylinder diameter at corresponding locations')
-        self.add_param('wall_thickness', np.zeros(nPoints), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('wall_thickness', np.zeros(nPoints-1), units='m', desc='shell thickness at corresponding locations')
 
         #out
         self.add_output('z_param', np.zeros(nPoints), units='m', desc='parameterized locations along cylinder, linear lofting between')
         self.add_output('z_full', np.zeros(nFull), units='m', desc='locations along cylinder')
         self.add_output('d_full', np.zeros(nFull), units='m', desc='cylinder diameter at corresponding locations')
-        self.add_output('t_full', np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
+        self.add_output('t_full', np.zeros(nFull-1), units='m', desc='shell thickness at corresponding locations')
         # Convenience outputs for export to other modules
         
         # Derivatives
@@ -50,13 +50,16 @@ class CylinderDiscretization(Component):
     def solve_nonlinear(self, params, unknowns, resids):
 
         unknowns['z_param'] = params['foundation_height'] + np.r_[0.0, np.cumsum(params['section_height'])]
+        # Have to regine each element one at a time so that we preserve input nodes
         z_full = np.array([])
         for k in range(unknowns['z_param'].size-1):
             zref = np.linspace(unknowns['z_param'][k], unknowns['z_param'][k+1], self.nRefine+1)
             z_full = np.append(z_full, zref)
-        unknowns['z_full']  = np.unique(z_full) #np.linspace(unknowns['z_param'][0], unknowns['z_param'][-1], self.nFull) 
-        unknowns['d_full']  = np.interp(unknowns['z_full'], unknowns['z_param'], params['diameter'])
-        unknowns['t_full']  = np.interp(unknowns['z_full'], unknowns['z_param'], params['wall_thickness'])
+        z_full = np.unique(z_full)
+        unknowns['z_full']  = z_full
+        unknowns['d_full']  = np.interp(z_full, unknowns['z_param'], params['diameter'])
+        z_section = 0.5*(z_full[:-1] + z_full[1:])
+        unknowns['t_full']  = sectionalInterp(z_section, unknowns['z_param'], params['wall_thickness'])
 
 class CylinderMass(Component):
 
@@ -64,7 +67,7 @@ class CylinderMass(Component):
         super(CylinderMass, self).__init__()
         
         self.add_param('d_full', val=np.zeros(nPoints), units='m', desc='cylinder diameter at corresponding locations')
-        self.add_param('t_full', val=np.zeros(nPoints), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('t_full', val=np.zeros(nPoints-1), units='m', desc='shell thickness at corresponding locations')
         self.add_param('z_full', val=np.zeros(nPoints), units='m', desc='parameterized locations along cylinder, linear lofting between')
         self.add_param('material_density', 0.0, units='kg/m**3', desc='material density')
         self.add_param('outfitting_factor', val=0.0, desc='Multiplier that accounts for secondary structure mass inside of cylinder')
@@ -87,22 +90,21 @@ class CylinderMass(Component):
         
     def solve_nonlinear(self, params, unknowns, resids):
         # Unpack variables for thickness and average radius at each can interface
-        Tb  = params['t_full'][:-1]
-        Tt  = params['t_full'][1:]
-        Rb  = 0.5*params['d_full'][:-1]
-        Rt  = 0.5*params['d_full'][1:]
-        zz  = params['z_full']
-        H   = np.diff(zz)
+        twall = params['t_full']
+        Rb    = 0.5*params['d_full'][:-1]
+        Rt    = 0.5*params['d_full'][1:]
+        zz    = params['z_full']
+        H     = np.diff(zz)
+        rho   = params['material_density']
         coeff = params['outfitting_factor']
         if coeff < 1.0: coeff += 1.0
-        rho = params['material_density']
 
         # Total mass of cylinder
-        V_shell = frustum.frustumShellVol(Rb, Rt, Tb, Tt, H)
+        V_shell = frustum.frustumShellVol(Rb, Rt, twall, H)
         unknowns['mass'] = coeff * rho * V_shell
         
         # Center of mass of each can/section
-        cm_section = zz[:-1] + frustum.frustumShellCG(Rb, Rt, Tb, Tt, H)
+        cm_section = zz[:-1] + frustum.frustumShellCG(Rb, Rt, twall, H)
         unknowns['section_center_of_mass'] = cm_section
 
         # Center of mass of cylinder
@@ -110,8 +112,8 @@ class CylinderMass(Component):
         unknowns['center_of_mass'] = np.dot(V_shell, cm_section) / V_shell.sum()
 
         # Moments of inertia
-        Izz_section = frustum.frustumShellIzz(Rb, Rt, Tb, Tt, H)
-        Ixx_section = Iyy_section = frustum.frustumShellIxx(Rb, Rt, Tb, Tt, H)
+        Izz_section = frustum.frustumShellIzz(Rb, Rt, twall, H)
+        Ixx_section = Iyy_section = frustum.frustumShellIxx(Rb, Rt, twall, H)
 
         # Sum up each cylinder section using parallel axis theorem
         I_base = np.zeros((3,3))
@@ -122,17 +124,16 @@ class CylinderMass(Component):
             I_base += Icg + V_shell[k]*(np.dot(R, R)*np.eye(3) - np.outer(R, R))
             
         # All of the mass and volume terms need to be multiplied by density
-        I_base *= rho
+        I_base *= coeff * rho
 
         unknowns['I_base'] = unassembleI(I_base)
         
 
         # Compute costs based on "Optimum Design of Steel Structures" by Farkas and Jarmai
         # All dimensions for correlations based on mm, not meters.
-        t_ave  = 0.5*(Tb + Tt)
         R_ave  = 0.5*(Rb + Rt)
         taper  = np.minimum(Rb/Rt, Rt/Rb)
-        nsec   = t_ave.size
+        nsec   = twall.size
         mplate = rho * V_shell.sum()
         k_m    = params['material_cost_rate'] #1.1 # USD / kg carbon steel plate
         k_f    = params['labor_cost_rate'] #1.0 # USD / min labor
@@ -147,10 +148,10 @@ class CylinderMass(Component):
         theta_A = 2.0
 
         # Labor-based expenses
-        K_f = k_f * ( manufacture.steel_cutting_plasma_time(cutLengths, t_ave) +
-                      manufacture.steel_rolling_time(theta_F, R_ave, t_ave) +
-                      manufacture.steel_butt_welding_time(theta_A, nsec, mplate, H, t_ave) +
-                      manufacture.steel_butt_welding_time(theta_A, nsec, mplate, 2*np.pi*Rb[1:], Tb[1:]) )
+        K_f = k_f * ( manufacture.steel_cutting_plasma_time(cutLengths, twall) +
+                      manufacture.steel_rolling_time(theta_F, R_ave, twall) +
+                      manufacture.steel_butt_welding_time(theta_A, nsec, mplate, H, twall) +
+                      manufacture.steel_butt_welding_time(theta_A, nsec, mplate, 2*np.pi*Rb[1:], twall[1:]) )
         
         # Cost step 5) Painting- outside and inside
         theta_p = 2
@@ -176,12 +177,12 @@ class CylinderFrame3DD(Component):
 
         # cross-sectional data along cylinder.
         self.add_param('z', np.zeros(npts), units='m', desc='location along cylinder. start at bottom and go to top')
-        self.add_param('Az', np.zeros(npts), units='m**2', desc='cross-sectional area')
-        self.add_param('Asx', np.zeros(npts), units='m**2', desc='x shear area')
-        self.add_param('Asy', np.zeros(npts), units='m**2', desc='y shear area')
-        self.add_param('Jz', np.zeros(npts), units='m**4', desc='polar moment of inertia')
-        self.add_param('Ixx', np.zeros(npts), units='m**4', desc='area moment of inertia about x-axis')
-        self.add_param('Iyy', np.zeros(npts), units='m**4', desc='area moment of inertia about y-axis')
+        self.add_param('Az', np.zeros(npts-1), units='m**2', desc='cross-sectional area')
+        self.add_param('Asx', np.zeros(npts-1), units='m**2', desc='x shear area')
+        self.add_param('Asy', np.zeros(npts-1), units='m**2', desc='y shear area')
+        self.add_param('Jz', np.zeros(npts-1), units='m**4', desc='polar moment of inertia')
+        self.add_param('Ixx', np.zeros(npts-1), units='m**4', desc='area moment of inertia about x-axis')
+        self.add_param('Iyy', np.zeros(npts-1), units='m**4', desc='area moment of inertia about y-axis')
 
         self.add_param('E', val=0.0, units='N/m**2', desc='modulus of elasticity')
         self.add_param('G', val=0.0, units='N/m**2', desc='shear modulus')
@@ -191,7 +192,7 @@ class CylinderFrame3DD(Component):
 
         # effective geometry -- used for handbook methods to estimate hoop stress, buckling, fatigue
         self.add_param('d', np.zeros(npts), units='m', desc='effective cylinder diameter for section')
-        self.add_param('t', np.zeros(npts), units='m', desc='effective shell thickness for section')
+        self.add_param('t', np.zeros(npts-1), units='m', desc='effective shell thickness for section')
 
         # spring reaction data.  Use float('inf') for rigid constraints.
         self.add_param('kidx', np.zeros(nK, dtype=np.int_), desc='indices of z where external stiffness reactions should be applied.', pass_by_obj=True)
@@ -246,19 +247,19 @@ class CylinderFrame3DD(Component):
         self.add_output('f1', 0.0, units='Hz', desc='First natural frequency')
         self.add_output('f2', 0.0, units='Hz', desc='Second natural frequency')
         self.add_output('top_deflection', 0.0, units='m', desc='Deflection of cylinder top in yaw-aligned +x direction')
-        self.add_output('Fz_out', np.zeros(npts), units='N', desc='Axial foce in vertical z-direction in cylinder structure.')
-        self.add_output('Vx_out', np.zeros(npts), units='N', desc='Shear force in x-direction in cylinder structure.')
-        self.add_output('Vy_out', np.zeros(npts), units='N', desc='Shear force in y-direction in cylinder structure.')
-        self.add_output('Mxx_out', np.zeros(npts), units='N*m', desc='Moment about x-axis in cylinder structure.')
-        self.add_output('Myy_out', np.zeros(npts), units='N*m', desc='Moment about y-axis in cylinder structure.')
-        self.add_output('Mzz_out', np.zeros(npts), units='N*m', desc='Moment about z-axis in cylinder structure.')
+        self.add_output('Fz_out', np.zeros(npts-1), units='N', desc='Axial foce in vertical z-direction in cylinder structure.')
+        self.add_output('Vx_out', np.zeros(npts-1), units='N', desc='Shear force in x-direction in cylinder structure.')
+        self.add_output('Vy_out', np.zeros(npts-1), units='N', desc='Shear force in y-direction in cylinder structure.')
+        self.add_output('Mxx_out', np.zeros(npts-1), units='N*m', desc='Moment about x-axis in cylinder structure.')
+        self.add_output('Myy_out', np.zeros(npts-1), units='N*m', desc='Moment about y-axis in cylinder structure.')
+        self.add_output('Mzz_out', np.zeros(npts-1), units='N*m', desc='Moment about z-axis in cylinder structure.')
         self.add_output('base_F', val=np.zeros(3), units='N', desc='Total force on cylinder')
         self.add_output('base_M', val=np.zeros(3), units='N*m', desc='Total moment on cylinder measured at base')
 
-        self.add_output('axial_stress', np.zeros(npts), units='N/m**2', desc='Axial stress in cylinder structure')
-        self.add_output('shear_stress', np.zeros(npts), units='N/m**2', desc='Shear stress in cylinder structure')
-        self.add_output('hoop_stress', np.zeros(npts), units='N/m**2', desc='Hoop stress in cylinder structure calculated with simple method used in API standards')
-        self.add_output('hoop_stress_euro', np.zeros(npts), units='N/m**2', desc='Hoop stress in cylinder structure calculated with Eurocode method')
+        self.add_output('axial_stress', np.zeros(npts-1), units='N/m**2', desc='Axial stress in cylinder structure')
+        self.add_output('shear_stress', np.zeros(npts-1), units='N/m**2', desc='Shear stress in cylinder structure')
+        self.add_output('hoop_stress', np.zeros(npts-1), units='N/m**2', desc='Hoop stress in cylinder structure calculated with simple method used in API standards')
+        self.add_output('hoop_stress_euro', np.zeros(npts-1), units='N/m**2', desc='Hoop stress in cylinder structure calculated with Eurocode method')
         
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -298,14 +299,14 @@ class CylinderFrame3DD(Component):
 
         # average across element b.c. frame3dd uses constant section elements
         # TODO: Use nodal2sectional
-        Az = 0.5*(params['Az'][:-1] + params['Az'][1:])
-        Asx = 0.5*(params['Asx'][:-1] + params['Asx'][1:])
-        Asy = 0.5*(params['Asy'][:-1] + params['Asy'][1:])
-        Jz = 0.5*(params['Jz'][:-1] + params['Jz'][1:])
-        Ixx = 0.5*(params['Ixx'][:-1] + params['Ixx'][1:])
-        Iyy = 0.5*(params['Iyy'][:-1] + params['Iyy'][1:])
-        E = params['E']*np.ones(Az.shape)
-        G = params['G']*np.ones(Az.shape)
+        Az  = params['Az']
+        Asx = params['Asx']
+        Asy = params['Asy']
+        Jz  = params['Jz']
+        Ixx = params['Ixx']
+        Iyy = params['Iyy']
+        E   = params['E']*np.ones(Az.shape)
+        G   = params['G']*np.ones(Az.shape)
         rho = params['rho']*np.ones(Az.shape)
 
         elements = frame3dd.ElementData(element, N1, N2, Az, Asx, Asy, Jz, Ixx, Iyy, E, G, roll, rho)
@@ -382,27 +383,18 @@ class CylinderFrame3DD(Component):
         # deflections due to loading (from cylinder top and wind/wave loads)
         unknowns['top_deflection'] = displacements.dx[iCase, n-1]  # in yaw-aligned direction
 
-        # shear and bending (convert from local to global c.s.)
-        Fz = forces.Nx[iCase, :]
-        Vy = forces.Vy[iCase, :]
-        Vx = -forces.Vz[iCase, :]
+        # shear and bending, one per element (convert from local to global c.s.)
+        Fz = forces.Nx[iCase, 1::2]
+        Vy = forces.Vy[iCase, 1::2]
+        Vx = -forces.Vz[iCase, 1::2]
 
-        Mzz = forces.Txx[iCase, :]
-        Myy = forces.Myy[iCase, :]
-        Mxx = -forces.Mzz[iCase, :]
-
-        # one per element (first negative b.c. need reaction)
-        Fz = np.r_[-reactions.Fz.sum(), Fz[1::2]]
-        Vy = np.r_[-reactions.Fy.sum(), Vy[1::2]]
-        Vx = np.r_[-reactions.Fx.sum(), Vx[1::2]]
-
-        Mzz = np.r_[-reactions.Mzz.sum(), Mzz[1::2]]
-        Myy = np.r_[-reactions.Myy.sum(), Myy[1::2]]
-        Mxx = np.r_[-reactions.Mxx.sum(), Mxx[1::2]]
+        Mzz = forces.Txx[iCase, 1::2]
+        Myy = forces.Myy[iCase, 1::2]
+        Mxx = -forces.Mzz[iCase, 1::2]
 
         # Record total forces and moments
-        unknowns['base_F'] = np.array([Vx[0], Vy[0], Fz[0]])
-        unknowns['base_M'] = np.array([Mxx[0], Myy[0], Mzz[0]])
+        unknowns['base_F'] = -1.0 * np.array([reactions.Fx.sum(), reactions.Fy.sum(), reactions.Fz.sum()])
+        unknowns['base_M'] = -1.0 * np.array([reactions.Mxx.sum(), reactions.Myy.sum(), reactions.Mzz.sum()])
 
         unknowns['Fz_out']  = Fz
         unknowns['Vx_out']  = Vx
@@ -410,20 +402,24 @@ class CylinderFrame3DD(Component):
         unknowns['Mxx_out'] = Mxx
         unknowns['Myy_out'] = Myy
         unknowns['Mzz_out'] = Mzz
+
         # axial and shear stress
+        d,_    = nodal2sectional(params['d'])
+        qdyn,_ = nodal2sectional(params['qdyn'])
+        
         ##R = self.d/2.0
         ##x_stress = R*np.cos(self.theta_stress)
         ##y_stress = R*np.sin(self.theta_stress)
         ##axial_stress = Fz/self.Az + Mxx/self.Ixx*y_stress - Myy/self.Iyy*x_stress
 #        V = Vy*x_stress/R - Vx*y_stress/R  # shear stress orthogonal to direction x,y
 #        shear_stress = 2. * V / self.Az  # coefficient of 2 for a hollow circular section, but should be conservative for other shapes
-        unknowns['axial_stress'] = Fz/params['Az'] - np.sqrt(Mxx**2+Myy**2)/params['Iyy']*params['d']/2.0  #More conservative, just use the tilted bending and add total max shear as well at the same point, if you do not like it go back to the previous lines
+        unknowns['axial_stress'] = Fz/params['Az'] - np.sqrt(Mxx**2+Myy**2)/params['Iyy']*d/2.0  #More conservative, just use the tilted bending and add total max shear as well at the same point, if you do not like it go back to the previous lines
 
         unknowns['shear_stress'] = 2. * np.sqrt(Vx**2+Vy**2) / params['Az'] # coefficient of 2 for a hollow circular section, but should be conservative for other shapes
 
         # hoop_stress (Eurocode method)
         L_reinforced = params['L_reinforced'] * np.ones(Fz.shape)
-        unknowns['hoop_stress_euro'] = hoopStressEurocode(params['z'], params['d'], params['t'], L_reinforced, params['qdyn'])
+        unknowns['hoop_stress_euro'] = hoopStressEurocode(params['z'], d, params['t'], L_reinforced, qdyn)
 
         # Simpler hoop stress used in API calculations
-        unknowns['hoop_stress'] = hoopStress(params['d'], params['t'], params['qdyn'])
+        unknowns['hoop_stress'] = hoopStress(d, params['t'], qdyn)

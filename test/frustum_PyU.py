@@ -2,7 +2,7 @@ import __init__
 import numpy as np
 import numpy.testing as npt
 import unittest
-import frustum as f
+import commonse.frustum as f
 from commonse import eps
 
 myones = np.ones((100,))
@@ -36,17 +36,17 @@ class TestFrustum(unittest.TestCase):
     def testFrustum_shell(self):
 
         # In limit of thickness approaching radius, should recover regular formulas
-        self.assertEqual(f.frustumShellVol(rb, rt, rb, rt, h, False), f.frustumVol(rb, rt, h, False))
-        self.assertEqual(f.frustumShellVol(2*rb, 2*rt, rb, rt, h, True), f.frustumVol(rb, rt, h, False))
+        self.assertEqual(f.frustumShellVol(rb, rb, rb, h, False), f.frustumVol(rb, rb, h, False))
+        self.assertEqual(f.frustumShellVol(2*rt, 2*rt, rt, h, True), f.frustumVol(rt, rt, h, False))
 
-        self.assertEqual(f.frustumShellCG(rb, rt, rb, rt, h, False), f.frustumCG(rb, rt, h, False))
-        self.assertEqual(f.frustumShellCG(2*rb, 2*rt, rb, rt, h, True), f.frustumCG(rb, rt, h, False))
+        self.assertEqual(f.frustumShellCG(rb, rb, rb, h, False), f.frustumCG(rb, rb, h, False))
+        self.assertEqual(f.frustumShellCG(2*rt, 2*rt, rt, h, True), f.frustumCG(rt, rt, h, False))
 
-        self.assertEqual(f.frustumShellIzz(rb, rt, rb, rt, h, False), f.frustumIzz(rb, rt, h, False))
-        self.assertEqual(f.frustumShellIzz(2*rb, 2*rt, rb, rt, h, True), f.frustumIzz(rb, rt, h, False))
+        self.assertEqual(f.frustumShellIzz(rb, rb, rb, h, False), f.frustumIzz(rb, rb, h, False))
+        self.assertEqual(f.frustumShellIzz(2*rt, 2*rt, rt, h, True), f.frustumIzz(rt, rt, h, False))
 
-        self.assertAlmostEqual(f.frustumShellIxx(rb, rt, rb-eps, rt-eps, h, False), f.frustumIxx(rb, rt, h, False))
-        self.assertAlmostEqual(f.frustumShellIxx(2*rb, 2*rt, rb-eps, rt-eps, h, True), f.frustumIxx(rb, rt, h, False))
+        self.assertAlmostEqual(f.frustumShellIxx(rb, rb, rb-eps, h, False), f.frustumIxx(rb, rb, h, False))
+        self.assertAlmostEqual(f.frustumShellIxx(2*rt, 2*rt, rt-eps, h, True), f.frustumIxx(rt, rt, h, False))
 
 
 def suite():

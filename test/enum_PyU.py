@@ -1,5 +1,5 @@
 import unittest
-import enum
+import commonse.enum as enum
 
 class TestEnum(unittest.TestCase):
     def setUp(self):

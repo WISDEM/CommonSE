@@ -131,7 +131,7 @@ def frustumIxx(rb, rt, h, diamFlag=False):
     return (A + B)
 
 
-def frustumShellVol(rb, rt, tb, tt, h, diamFlag=False):
+def frustumShellVol(rb, rt, t, h, diamFlag=False):
     """This function returns a frustum shell's volume (for computing mass with density) with radii or diameter inputs.
     NOTE: This is for a frustum SHELL, not a solid
 
@@ -140,8 +140,7 @@ def frustumShellVol(rb, rt, tb, tt, h, diamFlag=False):
     ----------
     rb : float (scalar/vector),  base radius
     rt : float (scalar/vector),  top radius
-    tb : float (scalar/vector),  base thickness
-    tt : float (scalar/vector),  top thickness
+    t  : float (scalar/vector),  thickness
     h  : float (scalar/vector),  height
     diamFlag : boolean, True if rb and rt are entered as diameters
 
@@ -155,14 +154,14 @@ def frustumShellVol(rb, rt, tb, tt, h, diamFlag=False):
         rt *= 0.5
     # Integrate 2*pi*r*dr*dz from r=ri(z) to ro(z), z=0 to h
     rb_o = rb
-    rb_i = rb-tb
+    rb_i = rb-t
     rt_o = rt
-    rt_i = rt-tt
+    rt_i = rt-t
     #( (np.pi*h/3.0) * ( (rb_o**2 + rb_o*rt_o + rt_o**2) - (rb_i**2 + rb_i*rt_i + rt_i**2) ) )
     return (frustumVol(rb_o, rt_o, h) - frustumVol(rb_i, rt_i, h))
 
 
-def frustumShellCG(rb, rt, tb, tt, h, diamFlag=False):
+def frustumShellCG(rb, rt, t, h, diamFlag=False):
     """This function returns a frustum's center of mass/gravity (centroid) with radii or diameter inputs.
     NOTE: This is for a frustum SHELL, not a solid
 
@@ -171,8 +170,7 @@ def frustumShellCG(rb, rt, tb, tt, h, diamFlag=False):
     ----------
     rb : float (scalar/vector),  base radius
     rt : float (scalar/vector),  top radius
-    tb : float (scalar/vector),  base thickness
-    tt : float (scalar/vector),  top thickness
+    t  : float (scalar/vector),  thickness
     h  : float (scalar/vector),  height
     diamFlag : boolean, True if rb and rt are entered as diameters
 
@@ -186,16 +184,16 @@ def frustumShellCG(rb, rt, tb, tt, h, diamFlag=False):
         rt *= 0.5
     # Integrate 2*pi*r*z*dr*dz/V from r=ri(z) to ro(z), z=0 to h
     rb_o = rb
-    rb_i = rb-tb
+    rb_i = rb-t
     rt_o = rt
-    rt_i = rt-tt
+    rt_i = rt-t
     A = (rb_o**2 + 2.0*rb_o*rt_o + 3.0*rt_o**2) - (rb_i**2 + 2.0*rb_i*rt_i + 3.0*rt_i**2)
     B = (rb_o**2 + rb_o*rt_o + rt_o**2) - (rb_i**2 + rb_i*rt_i + rt_i**2)
     return (h * A / 4.0 / B)
 
 
 
-def frustumShellIzz(rb, rt, tb, tt, h, diamFlag=False):
+def frustumShellIzz(rb, rt, t, h, diamFlag=False):
     """This function returns a frustum's mass-moment of inertia (divided by density) about the 
     central (axial) z-axis with radii or diameter inputs.
     NOTE: This is for a frustum SHELL, not a solid
@@ -205,8 +203,7 @@ def frustumShellIzz(rb, rt, tb, tt, h, diamFlag=False):
     ----------
     rb : float (scalar/vector),  base radius
     rt : float (scalar/vector),  top radius
-    tb : float (scalar/vector),  base thickness
-    tt : float (scalar/vector),  top thickness
+    t  : float (scalar/vector),  thickness
     h  : float (scalar/vector),  height
     diamFlag : boolean, True if rb and rt are entered as diameters
 
@@ -220,14 +217,14 @@ def frustumShellIzz(rb, rt, tb, tt, h, diamFlag=False):
         rt *= 0.5
     # Integrate 2*pi*r*dr*dz from r=ri(z) to ro(z), z=0 to h
     rb_o = rb
-    rb_i = rb-tb
+    rb_i = rb-t
     rt_o = rt
-    rt_i = rt-tt
+    rt_i = rt-t
     return (frustumIzz(rb_o, rt_o, h) - frustumIzz(rb_i, rt_i, h))
 
 
 
-def frustumShellIxx(rb, rt, tb, tt, h, diamFlag=False):
+def frustumShellIxx(rb, rt, t, h, diamFlag=False):
     """This function returns a frustum's mass-moment of inertia (divided by density) about the 
     transverse x/y-axis passing through the center of mass with radii or diameter inputs.
     NOTE: This is for a frustum SHELL, not a solid
@@ -237,8 +234,7 @@ def frustumShellIxx(rb, rt, tb, tt, h, diamFlag=False):
     ----------
     rb : float (scalar/vector),  base radius
     rt : float (scalar/vector),  top radius
-    tb : float (scalar/vector),  base thickness
-    tt : float (scalar/vector),  top thickness
+    t  : float (scalar/vector),  thickness
     h  : float (scalar/vector),  height
     diamFlag : boolean, True if rb and rt are entered as diameters
 
@@ -252,9 +248,9 @@ def frustumShellIxx(rb, rt, tb, tt, h, diamFlag=False):
         rt *= 0.5
     # Integrate 2*pi*r*dr*dz from r=ri(z) to ro(z), z=0 to h
     rb_o = rb
-    rb_i = rb-tb
+    rb_i = rb-t
     rt_o = rt
-    rt_i = rt-tt
+    rt_i = rt-t
     return (frustumIxx(rb_o, rt_o, h) - frustumIxx(rb_i, rt_i, h))
 
 if __name__ == '__main__':

@@ -46,22 +46,22 @@ class TestDrag(unittest.TestCase):
 
         self.wave.solve_nonlinear(self.params, self.unknowns, self.resid)
 
-        npt.assert_equal(self.unknowns['waveLoads:Px'], Fp)
-        npt.assert_equal(self.unknowns['waveLoads:Py'], 0.0)
-        npt.assert_equal(self.unknowns['waveLoads:Pz'], 0.0)
-        npt.assert_equal(self.unknowns['waveLoads:qdyn'], q)
-        npt.assert_equal(self.unknowns['waveLoads:pt'], q + 3.0)
-        npt.assert_equal(self.unknowns['waveLoads:z'], -100.0)
-        npt.assert_equal(self.unknowns['waveLoads:beta'], 0.0)
-        npt.assert_equal(self.unknowns['waveLoads:d'], 10.0)
+        npt.assert_equal(self.unknowns['waveLoads_Px'], Fp)
+        npt.assert_equal(self.unknowns['waveLoads_Py'], 0.0)
+        npt.assert_equal(self.unknowns['waveLoads_Pz'], 0.0)
+        npt.assert_equal(self.unknowns['waveLoads_qdyn'], q)
+        npt.assert_equal(self.unknowns['waveLoads_pt'], q + 3.0)
+        npt.assert_equal(self.unknowns['waveLoads_z'], -100.0)
+        npt.assert_equal(self.unknowns['waveLoads_beta'], 0.0)
+        npt.assert_equal(self.unknowns['waveLoads_d'], 10.0)
 
         self.params['cd_usr'] = np.nan
         self.wave.solve_nonlinear(self.params, self.unknowns, self.resid)
-        npt.assert_equal(self.unknowns['waveLoads:Px'], Fp)
+        npt.assert_equal(self.unknowns['waveLoads_Px'], Fp)
 
         self.params['cd_usr'] = -np.inf
         self.wave.solve_nonlinear(self.params, self.unknowns, self.resid)
-        npt.assert_equal(self.unknowns['waveLoads:Px'], Fp)
+        npt.assert_equal(self.unknowns['waveLoads_Px'], Fp)
         
     def testCDset(self):
         self.params['cd_usr'] = 2.0
@@ -77,7 +77,7 @@ class TestDrag(unittest.TestCase):
         Fi = rho * A * np.pi * r*r
         Fp = Fi + D
         self.wave.solve_nonlinear(self.params, self.unknowns, self.resid)
-        npt.assert_equal(self.unknowns['waveLoads:Px'], Fp)
+        npt.assert_equal(self.unknowns['waveLoads_Px'], Fp)
         
 def suite():
     suite = unittest.TestSuite()

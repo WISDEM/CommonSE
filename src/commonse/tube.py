@@ -14,6 +14,7 @@ import math
 import numpy as np
 from .Material import Material
 from openmdao.api import Component, Group, Problem
+from commonse.utilities import nodal2sectional
 pi = math.pi
 
 def main():
@@ -32,14 +33,14 @@ class CylindricalShellProperties(Component):
         super(CylindricalShellProperties, self).__init__()
 
         self.add_param('d', np.zeros(nFull), units='m', desc='tower diameter at corresponding locations')
-        self.add_param('t', np.zeros(nFull), units='m', desc='shell thickness at corresponding locations')
+        self.add_param('t', np.zeros(nFull-1), units='m', desc='shell thickness at corresponding locations')
 
-        self.add_output('Az', np.zeros(nFull), units='m**2', desc='cross-sectional area')
-        self.add_output('Asx', np.zeros(nFull), units='m**2', desc='x shear area')
-        self.add_output('Asy', np.zeros(nFull), units='m**2', desc='y shear area')
-        self.add_output('Jz', np.zeros(nFull), units='m**4', desc='polar moment of inertia')
-        self.add_output('Ixx', np.zeros(nFull), units='m**4', desc='area moment of inertia about x-axis')
-        self.add_output('Iyy', np.zeros(nFull), units='m**4', desc='area moment of inertia about y-axis')
+        self.add_output('Az', np.zeros(nFull-1), units='m**2', desc='cross-sectional area')
+        self.add_output('Asx', np.zeros(nFull-1), units='m**2', desc='x shear area')
+        self.add_output('Asy', np.zeros(nFull-1), units='m**2', desc='y shear area')
+        self.add_output('Jz', np.zeros(nFull-1), units='m**4', desc='polar moment of inertia')
+        self.add_output('Ixx', np.zeros(nFull-1), units='m**4', desc='area moment of inertia about x-axis')
+        self.add_output('Iyy', np.zeros(nFull-1), units='m**4', desc='area moment of inertia about y-axis')
 
         # Derivatives
         self.deriv_options['type'] = 'fd'
@@ -47,8 +48,8 @@ class CylindricalShellProperties(Component):
 
 
     def solve_nonlinear(self, params, unknowns, resids):
-
-        tube = Tube(params['d'],params['t'])
+        d,_ = nodal2sectional(params['d'])
+        tube = Tube(d,params['t'])
 
         unknowns['Az'] = tube.Area
         unknowns['Asx'] = tube.Asx
