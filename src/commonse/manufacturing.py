@@ -4,7 +4,10 @@ from commonse import eps
 
 def steel_cutting_plasma_time(length, thickness):
     # Length input as meters, thickness in mm
-    time = length / (-0.180150943 + 41.03815215/(1e3*thickness+eps)) # minutes
+    #time = length / (-0.180150943 + 41.03815215/(1e3*thickness+eps)) # minutes
+    # Better conditioned polynomial fit to the above correlation
+    pp = np.array([2.44908121e+02, 1.74461814e+01, 7.05214799e-02])
+    time = length * np.polyval(pp, thickness)
     return np.sum( time)
 
 def steel_rolling_time(theta, radius, thickness):
