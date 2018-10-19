@@ -17,7 +17,10 @@ def steel_rolling_time(theta, radius, thickness):
 
 def steel_tube_cutgrind_time(theta, radius, thickness, angle):
     # Radius and thickness input as meters, converted to mm
-    time = theta * 2.5 * np.pi * (2.0*1e3*radius) / ((350.0 - 2.0*1e3*thickness)*0.3*np.sin(angle))
+    #time = theta * 2.5 * np.pi * (2.0*1e3*radius) / ((350.0 - 2.0*1e3*thickness)*0.3*np.sin(angle))
+    # Better conditioned polynomial fit to the above correlation
+    pp   = np.array([7.84235859, 0.1428632 , 0.07765389])
+    time = theta * (2.0*1e3*radius) / (np.polyval(pp, thickness)*np.sin(angle))
     return np.sum( time )
 
 def steel_welding_time(theta, npieces, mtotal, length, thickness, coeff):
