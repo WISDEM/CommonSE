@@ -50,7 +50,7 @@ class TowerModes(Component):
     
 class MaxTipDeflection(Component):
 
-    def __init__(self, nFull):
+    def __init__(self, nFullTow):
         super(MaxTipDeflection, self).__init__()
 
 
@@ -62,8 +62,8 @@ class MaxTipDeflection(Component):
         self.add_param('precone', val=0.0, units='deg', desc='precone angle')
         self.add_param('tilt', val=0.0, units='deg', desc='tilt angle')
         self.add_param('hub_tt', val=np.zeros(3), units='m', desc='location of hub relative to tower-top in yaw-aligned c.s.')
-        self.add_param('tower_z', val=np.zeros(nFull), units='m', desc='z-coordinates of tower at fine-section nodes')
-        self.add_param('tower_d', val=np.zeros(nFull), units='m', desc='diameter of tower at fine-section nodes')
+        self.add_param('tower_z', val=np.zeros(nFullTow), units='m', desc='z-coordinates of tower at fine-section nodes')
+        self.add_param('tower_d', val=np.zeros(nFullTow), units='m', desc='diameter of tower at fine-section nodes')
         self.add_param('gamma_m', val=0.0, desc='safety factor on materials')
 
         self.add_output('tip_deflection_ratio', val=0.0, units='m', desc='clearance between undeflected blade and tower')
