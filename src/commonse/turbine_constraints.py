@@ -66,7 +66,7 @@ class MaxTipDeflection(Component):
         self.add_param('tower_d', val=np.zeros(nFullTow), units='m', desc='diameter of tower at fine-section nodes')
         self.add_param('gamma_m', val=0.0, desc='safety factor on materials')
 
-        self.add_output('tip_deflection_ratio', val=0.0, units='m', desc='clearance between undeflected blade and tower')
+        self.add_output('tip_deflection_ratio', val=0.0, desc='clearance between undeflected blade and tower')
         self.add_output('ground_clearance', val=0.0, units='m', desc='distance between blade tip and ground')
 
         
@@ -190,4 +190,4 @@ class TurbineConstraints(Group):
         super(TurbineConstraints, self).__init__()
 
         self.add('modes', TowerModes(), promotes=['*'])
-        self.add('tipd', MaxTipDeflection(nFull), promotes=['*'])
+        #self.add('tipd', MaxTipDeflection(nFull), promotes=['*'])
