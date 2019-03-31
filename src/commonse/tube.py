@@ -88,6 +88,11 @@ class Tube:
         return (self.D**2-(self.D-2*self.t)**2)* pi/4
 
     @property
+    def derivArea(self):
+        return {'D': 2* pi/4 * (self.D**2-(self.D-2*self.t)) * (2*self.D -1),
+                't': 0}
+
+    @property
     def Amid(self): #mid-thickness inscribed area of tube (thin wall torsion calculation)
         return (self.D-self.t)**2* pi/4
 
