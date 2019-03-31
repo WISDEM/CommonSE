@@ -150,7 +150,7 @@ class CylinderMass(Component):
         # Labor-based expenses
         K_f = k_f * ( manufacture.steel_cutting_plasma_time(cutLengths, twall) +
                       manufacture.steel_rolling_time(theta_F, R_ave, twall) +
-                      manufacture.steel_butt_welding_time(theta_A, nsec, mplate, H, twall) +
+                      manufacture.steel_butt_welding_time(theta_A, nsec, mplate, cutLengths, twall) +
                       manufacture.steel_butt_welding_time(theta_A, nsec, mplate, 2*np.pi*Rb[1:], twall[1:]) )
         
         # Cost step 5) Painting- outside and inside
