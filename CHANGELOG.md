@@ -1,5 +1,11 @@
 # CommonSE Changelog
 
+## 0.2.0 ([04/01/2019])
+
+[Garrett Barter](mailto: garrett.barter@nrel.gov)
+
+- OpenMDAO1 release
+
 ## 0.1.0 (June 27, 2014)
 
 Andrew Ning <andrew.ning@nrel.gov>
