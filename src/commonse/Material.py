@@ -14,7 +14,7 @@ def main():
     #The main fct is written to test the class
     mat=Material(E=3.5e5,rho=8500.)
     mat1=Material(matname='grout')
-    print 'Example Returning mat and mat1 as 2 objects'
+    print('Example Returning mat and mat1 as 2 objects')
     return mat,mat1
 
 
