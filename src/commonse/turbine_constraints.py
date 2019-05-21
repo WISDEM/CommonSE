@@ -61,7 +61,7 @@ class MaxTipDeflection(Component):
         self.add_param('presweepTip',    val=0.0,               units='m',  desc='Blade tip location in y_b')
         self.add_param('precone',        val=0.0,               units='deg',desc='Rotor precone angle')
         self.add_param('tilt',           val=0.0,               units='deg',desc='Nacelle uptilt angle')
-        self.add_param('hub_cm',         val=np.zeros(3),       units='m',  desc='Location of hub relative to tower-top in yaw-aligned c.s.')
+        self.add_param('hub_center',         val=np.zeros(3),       units='m',  desc='Location of hub relative to tower-top in yaw-aligned c.s.')
         self.add_param('z_full',         val=np.zeros(nFullTow),units='m',  desc='z-coordinates of tower at fine-section nodes')
         self.add_param('d_full',         val=np.zeros(nFullTow),units='m',  desc='Diameter of tower at fine-section nodes')
         self.add_param('gamma_m',        val=0.0, desc='safety factor on materials')
@@ -75,11 +75,14 @@ class MaxTipDeflection(Component):
         # Unpack variables
         z_tower = params['z_full']
         d_tower = params['d_full']
-        hub_cm  = params['hub_cm']
+        hub_center  = params['hub_center']
         precone = params['precone']
         tilt    = params['tilt']
         delta   = params['tip_deflection']
         upwind  = not params['downwind']
+        
+        
+        
         
 
         # Coordinates of blade tip in yaw c.s.
@@ -87,7 +90,7 @@ class MaxTipDeflection(Component):
                     bladeToAzimuth(precone).azimuthToHub(180.0).hubToYaw(tilt)
 
         # Find the radius of tower where blade passes
-        z_interp = z_tower[-1] + hub_cm[2] + blade_yaw.z
+        z_interp = z_tower[-1] + hub_center[2] + blade_yaw.z
         d_interp, ddinterp_dzinterp, ddinterp_dtowerz, ddinterp_dtowerd = interp_with_deriv(z_interp, z_tower, d_tower)
         r_interp = 0.5 * d_interp
         drinterp_dzinterp = 0.5 * ddinterp_dzinterp
@@ -96,12 +99,12 @@ class MaxTipDeflection(Component):
 
         # Max deflection before strike
         if upwind:
-            parked_margin = -hub_cm[0] - blade_yaw.x - r_interp
+            parked_margin = -hub_center[0] - blade_yaw.x - r_interp
         else:
-            parked_margin = hub_cm[0] + blade_yaw.x - r_interp
+            parked_margin = hub_center[0] + blade_yaw.x - r_interp
         unknowns['blade_tip_tower_clearance']   = parked_margin
         unknowns['tip_deflection_ratio']        = delta * params['gamma_m'] / parked_margin
-            
+        
         # ground clearance
         unknowns['ground_clearance'] = z_interp
 
