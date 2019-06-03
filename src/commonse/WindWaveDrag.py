@@ -56,17 +56,26 @@ def cylinderDrag(Re):
         drag coefficient (normalized by cylinder diameter)
 
     """
-    try:
-        Re[0]
-    except:
-        Re = np.array([Re])
 
     ReN = Re / 1.0e6
+    np.place(ReN, ReN>Re_pt[-1], Re_pt[-1])
 
     cd = np.zeros_like(Re)
     dcd_dRe = np.zeros_like(Re)
-    idx = ReN > 0
-    cd[idx], dcd_dRe[idx] = drag_spline.interp(np.log10(ReN[idx]))
+    idx = np.array([i for i, Rei in enumerate(Re) if Rei > 0.])
+
+    try:
+        cd[idx], dcd_dRe[idx] = drag_spline.interp(np.log10(ReN[idx]))
+    except:
+        cd[idx], dcd_dRe[idx], _, _ = drag_spline.interp(np.log10(ReN[idx]))
+
+    # for i in idx:
+    #     print(i, type(i))
+    #     print(Re, type(Re))
+    #     print(Re[i], type(Re[i]))
+    #     print(dcd_dRe[i],type(dcd_dRe[i]))
+    #     dcd_dRe[i] = dcd_dRe[i]/(Re[i]*math.log(10)) # chain rule
+
     dcd_dRe[idx] /= (Re[idx]*math.log(10))  # chain rule
 
     return cd, dcd_dRe
@@ -185,31 +194,35 @@ class CylinderWindDrag(Component):
         mu = params['mu']
         beta = params['beta']
 
-        # dynamic pressure
-        q = 0.5*rho*U**2
+        if not (params['rho'] == 0. or all(params['U'] == 0.) or params['mu'] == 0.):
 
-        # Reynolds number and drag
-        if params['cd_usr'] in [np.inf, -np.inf, None, np.nan]:
-            Re = rho*U*d/mu
-            cd, dcd_dRe = cylinderDrag(Re)
-        else:
-            cd = params['cd_usr']
-            Re = 1.0
-            dcd_dRe = 0.0
-        Fp = q*cd*d
+            # dynamic pressure
+            q = 0.5*rho*U**2
 
-        # components of distributed loads
-        Px = Fp*cosd(beta)
-        Py = Fp*sind(beta)
-        Pz = 0*Fp
+            # Reynolds number and drag
+            if params['cd_usr'] in [np.inf, -np.inf, None, np.nan]:
+                Re = rho*U*d/mu
+                cd, dcd_dRe = cylinderDrag(Re)
+            else:
+                cd = params['cd_usr']
+                Re = 1.0
+                dcd_dRe = 0.0
+            Fp = q*cd*d
 
-        # pack data
-        unknowns['windLoads_Px'] = Px
-        unknowns['windLoads_Py'] = Py
-        unknowns['windLoads_Pz'] = Pz
-        unknowns['windLoads_qdyn'] = q
+            # components of distributed loads
+            Px = Fp*cosd(beta)
+            Py = Fp*sind(beta)
+            Pz = 0*Fp
+
+            # pack data
+            unknowns['windLoads_Px'] = Px
+            unknowns['windLoads_Py'] = Py
+            unknowns['windLoads_Pz'] = Pz
+            unknowns['windLoads_qdyn'] = q
+            unknowns['windLoads_beta'] = beta
+        
         unknowns['windLoads_z'] = params['z']
-        unknowns['windLoads_beta'] = beta
+        unknowns['windLoads_d'] = params['d']
 
 
     def linearize(self, params, unknowns, resids):
@@ -318,7 +331,7 @@ class CylinderWaveDrag(Component):
 
         #wlevel = params['wlevel']
         #if wlevel > 0.0: wlevel *= -1.0
-        
+
         rho = params['rho']
         U = params['U']
         #U0 = params['U0']
@@ -328,11 +341,11 @@ class CylinderWaveDrag(Component):
         beta = params['beta']
         #beta0 = params['beta0']
 
-        # dynamic pressure
-        q = 0.5*rho*U**2
-        #q0= 0.5*rho*U0**2
+        if not (params['rho'] == 0. or all(params['U'] == 0.) or params['mu'] == 0.):
 
-        if not (params['rho'] == 0. or params['mu'] == 0. or all(params['U'] == 0.)):
+            # dynamic pressure
+            q = 0.5*rho*U**2
+            #q0= 0.5*rho*U0**2
 
             # Reynolds number and drag
             if params['cd_usr'] in [np.inf, -np.inf, None, np.nan]:
@@ -383,9 +396,9 @@ class CylinderWaveDrag(Component):
             unknowns['waveLoads_Py'] = Py
             unknowns['waveLoads_Pz'] = Pz
             unknowns['waveLoads_qdyn'] = q
-            unknowns['waveLoads_beta'] = beta
             unknowns['waveLoads_pt'] = q + params['p']
-        
+            unknowns['waveLoads_beta'] = beta
+
         unknowns['waveLoads_d'] = d
         unknowns['waveLoads_z'] = params['z']
 
