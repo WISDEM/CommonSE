@@ -56,6 +56,10 @@ def cylinderDrag(Re):
         drag coefficient (normalized by cylinder diameter)
 
     """
+    try:
+        Re[0]
+    except:
+        Re = np.array([Re])
 
     ReN = Re / 1.0e6
 
@@ -328,59 +332,62 @@ class CylinderWaveDrag(Component):
         q = 0.5*rho*U**2
         #q0= 0.5*rho*U0**2
 
-        # Reynolds number and drag
-        if params['cd_usr'] in [np.inf, -np.inf, None, np.nan]:
-            Re = rho*U*d/mu
-            cd, dcd_dRe = cylinderDrag(Re)
-        else:
-            cd = params['cd_usr']*np.ones_like(d)
-            Re = 1.0
-            dcd_dRe = 0.0
+        if not (params['rho'] == 0. or params['mu'] == 0. or all(params['U'] == 0.)):
 
-        # inertial and drag forces
-        Fi = rho*params['cm']*math.pi/4.0*d**2*params['A']  # Morrison's equation
-        Fd = q*cd*d
-        Fp = Fi + Fd
+            # Reynolds number and drag
+            if params['cd_usr'] in [np.inf, -np.inf, None, np.nan]:
+                Re = rho*U*d/mu
+                cd, dcd_dRe = cylinderDrag(Re)
+            else:
+                cd = params['cd_usr']*np.ones_like(d)
+                Re = 1.0
+                dcd_dRe = 0.0
 
-        # components of distributed loads
-        Px = Fp*cosd(beta)
-        Py = Fp*sind(beta)
-        Pz = 0.*Fp
+            # inertial and drag forces
+            Fi = rho*params['cm']*math.pi/4.0*d**2*params['A']  # Morrison's equation
+            Fd = q*cd*d
+            Fp = Fi + Fd
 
-        #FORCES [N/m] AT z=0 m
-        #idx0 = np.abs(zrel).argmin()  # closest index to z=0, used to find d at z=0
-        #d0 = d[idx0]  # initialize
-        #cd0 = cd[idx0]  # initialize
-        #if (zrel[idx0]<0.) and (idx0< (zrel.size-1)):       # point below water
-        #    d0 = np.mean(d[idx0:idx0+2])
-        #    cd0 = np.mean(cd[idx0:idx0+2])
-        #elif (zrel[idx0]>0.) and (idx0>0):     # point above water
-        #    d0 = np.mean(d[idx0-1:idx0+1])
-        #    cd0 = np.mean(cd[idx0-1:idx0+1])
-        #Fi0 = rho*params['cm']*math.pi/4.0*d0**2*params['A0']  # Morrison's equation
-        #Fd0 = q0*cd0*d0
-        #Fp0 = Fi0 + Fd0
+            # components of distributed loads
+            Px = Fp*cosd(beta)
+            Py = Fp*sind(beta)
+            Pz = 0.*Fp
 
-        #Px0 = Fp0*cosd(beta0)
-        #Py0 = Fp0*sind(beta0)
-        #Pz0 = 0.*Fp0
+            #FORCES [N/m] AT z=0 m
+            #idx0 = np.abs(zrel).argmin()  # closest index to z=0, used to find d at z=0
+            #d0 = d[idx0]  # initialize
+            #cd0 = cd[idx0]  # initialize
+            #if (zrel[idx0]<0.) and (idx0< (zrel.size-1)):       # point below water
+            #    d0 = np.mean(d[idx0:idx0+2])
+            #    cd0 = np.mean(cd[idx0:idx0+2])
+            #elif (zrel[idx0]>0.) and (idx0>0):     # point above water
+            #    d0 = np.mean(d[idx0-1:idx0+1])
+            #    cd0 = np.mean(cd[idx0-1:idx0+1])
+            #Fi0 = rho*params['cm']*math.pi/4.0*d0**2*params['A0']  # Morrison's equation
+            #Fd0 = q0*cd0*d0
+            #Fp0 = Fi0 + Fd0
 
-        #Store qties at z=0 MSL
-        #unknowns['waveLoads_Px0'] = Px0
-        #unknowns['waveLoads_Py0'] = Py0
-        #unknowns['waveLoads_Pz0'] = Pz0
-        #unknowns['waveLoads_qdyn0'] = q0
-        #unknowns['waveLoads_beta0'] = beta0
+            #Px0 = Fp0*cosd(beta0)
+            #Py0 = Fp0*sind(beta0)
+            #Pz0 = 0.*Fp0
 
-        # pack data
-        unknowns['waveLoads_Px'] = Px
-        unknowns['waveLoads_Py'] = Py
-        unknowns['waveLoads_Pz'] = Pz
-        unknowns['waveLoads_qdyn'] = q
-        unknowns['waveLoads_pt'] = q + params['p']
-        unknowns['waveLoads_z'] = params['z']
-        unknowns['waveLoads_beta'] = beta
+            #Store qties at z=0 MSL
+            #unknowns['waveLoads_Px0'] = Px0
+            #unknowns['waveLoads_Py0'] = Py0
+            #unknowns['waveLoads_Pz0'] = Pz0
+            #unknowns['waveLoads_qdyn0'] = q0
+            #unknowns['waveLoads_beta0'] = beta0
+
+            # pack data
+            unknowns['waveLoads_Px'] = Px
+            unknowns['waveLoads_Py'] = Py
+            unknowns['waveLoads_Pz'] = Pz
+            unknowns['waveLoads_qdyn'] = q
+            unknowns['waveLoads_beta'] = beta
+            unknowns['waveLoads_pt'] = q + params['p']
+        
         unknowns['waveLoads_d'] = d
+        unknowns['waveLoads_z'] = params['z']
 
 
     def linearize(self, params, unknowns, resids):
